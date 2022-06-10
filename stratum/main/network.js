@@ -108,8 +108,8 @@ const Network = function(config, configMain, authorizeFn) {
 
       // Define Stratum Options
       const options = {
-        ...(port.tls && { key: fs.readFileSync(path.join('./certs', _this.configMain.tls.key)) }),
-        ...(port.tls && { cert: fs.readFileSync(path.join('./certs', _this.configMain.tls.cert)) }),
+        ...(port.tls && { key: fs.readFileSync(path.join('./certificates', _this.configMain.tls.key)) }),
+        ...(port.tls && { cert: fs.readFileSync(path.join('./certificates', _this.configMain.tls.cert)) }),
         allowHalfOpen: false,
       };
 
