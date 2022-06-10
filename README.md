@@ -1,7 +1,7 @@
 # Foundation Stratum (Template, v2)
 
-[![Codecov Coverage](https://img.shields.io/codecov/c/github/blinkhash/foundation-v2-template.svg?style=flat-square)](https://codecov.io/gh/blinkhash/foundation-v2-template/)
-[![Foundation CI](https://github.com/blinkhash/foundation-v2-template/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/blinkhash/foundation-v2-template/actions/workflows/build.yml)
+[![Codecov Coverage](https://img.shields.io/codecov/c/github/blinkhash/foundation-v2-bitcoin.svg?style=flat-square)](https://codecov.io/gh/blinkhash/foundation-v2-bitcoin/)
+[![Foundation CI](https://github.com/blinkhash/foundation-v2-bitcoin/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/blinkhash/foundation-v2-bitcoin/actions/workflows/build.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Discord](https://img.shields.io/discord/738590795384356904)](https://discord.gg/rNjez6VgNF)
 
