@@ -95,7 +95,7 @@ const Transactions = function(config) {
 
     // Handle Recipient Transactions
     let recipientTotal = 0;
-    _this.config.primary.recipients.forEach(recipient => {
+    _this.config.primary.recipients.forEach((recipient) => {
       const recipientReward = Math.floor(recipient.percentage * reward);
       const recipientScript = utils.addressToScript(recipient.address, network);
       recipientTotal += recipientReward;

@@ -43,7 +43,7 @@ describe('Test daemon functionality', () => {
 
   test('Test daemon initialization [1]', (done) => {
     nock('http://127.0.0.1:8332')
-      .post('/', body => body.method === 'getpeerinfo')
+      .post('/', (body) => body.method === 'getpeerinfo')
       .reply(200, JSON.stringify({
         error: null,
         result: null,
@@ -59,14 +59,14 @@ describe('Test daemon functionality', () => {
 
   test('Test daemon initialization [2]', (done) => {
     nock('http://127.0.0.1:8332')
-      .post('/', body => body.method === 'getpeerinfo')
+      .post('/', (body) => body.method === 'getpeerinfo')
       .reply(200, JSON.stringify({
         error: null,
         result: null,
         instance: 'nocktest',
       }));
     nock('http://127.0.0.2:8332')
-      .post('/', body => body.method === 'getpeerinfo')
+      .post('/', (body) => body.method === 'getpeerinfo')
       .reply(200, JSON.stringify({
         error: null,
         result: null,
@@ -82,7 +82,7 @@ describe('Test daemon functionality', () => {
 
   test('Test daemon initialization [3]', (done) => {
     nock('http://127.0.0.1:8332')
-      .post('/', body => body.method === 'getpeerinfo')
+      .post('/', (body) => body.method === 'getpeerinfo')
       .reply(401, JSON.stringify({
         error: null,
         result: null,
@@ -100,7 +100,7 @@ describe('Test daemon functionality', () => {
   test('Test daemon commands [1]', (done) => {
     MockDate.set(1634742080841);
     nock('http://127.0.0.1:8332')
-      .post('/', body => body.method === 'getblocktemplate')
+      .post('/', (body) => body.method === 'getblocktemplate')
       .reply(200, JSON.stringify({
         error: null,
         result: null,
@@ -120,7 +120,7 @@ describe('Test daemon functionality', () => {
   test('Test daemon commands [2]', (done) => {
     MockDate.set(1634742080841);
     nock('http://127.0.0.1:8332')
-      .post('/', body => body.method === 'getblocktemplate')
+      .post('/', (body) => body.method === 'getblocktemplate')
       .reply(200, JSON.stringify({
         error: null,
         result: null,

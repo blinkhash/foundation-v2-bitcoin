@@ -31,14 +31,14 @@ process.env.forkId = '0';
 
 function mockSetupDaemons(pool, callback) {
   nock('http://127.0.0.1:8332')
-    .post('/', body => body.method === 'getpeerinfo')
+    .post('/', (body) => body.method === 'getpeerinfo')
     .reply(200, JSON.stringify({
       id: 'nocktest',
       error: null,
       result: null,
     }));
   nock('http://127.0.0.1:8336')
-    .post('/', body => body.method === 'getpeerinfo')
+    .post('/', (body) => body.method === 'getpeerinfo')
     .reply(200, JSON.stringify({
       id: 'nocktest',
       error: null,
@@ -60,7 +60,7 @@ function mockSetupSettings(pool, callback) {
 
 function mockSetupPrimaryBlockchain(pool, callback) {
   nock('http://127.0.0.1:8332')
-    .post('/', body => body.method === 'getblocktemplate')
+    .post('/', (body) => body.method === 'getblocktemplate')
     .reply(200, JSON.stringify({
       id: 'nocktest',
       error: null,
@@ -72,7 +72,7 @@ function mockSetupPrimaryBlockchain(pool, callback) {
 function mockSetupAuxiliaryBlockchain(pool, callback) {
   if (pool.auxiliary.enabled) {
     nock('http://127.0.0.1:8336')
-      .post('/', body => body.method === 'getauxblock')
+      .post('/', (body) => body.method === 'getauxblock')
       .reply(200, JSON.stringify({
         id: 'nocktest',
         error: null,
@@ -84,7 +84,7 @@ function mockSetupAuxiliaryBlockchain(pool, callback) {
 
 function mockSetupFirstJob(pool, callback) {
   nock('http://127.0.0.1:8332')
-    .post('/', body => body.method === 'getblocktemplate')
+    .post('/', (body) => body.method === 'getblocktemplate')
     .reply(200, JSON.stringify({
       id: 'nocktest',
       error: null,
@@ -92,7 +92,7 @@ function mockSetupFirstJob(pool, callback) {
     }));
   if (pool.auxiliary.enabled) {
     nock('http://127.0.0.1:8336')
-      .post('/', body => body.method === 'getauxblock')
+      .post('/', (body) => body.method === 'getauxblock')
       .reply(200, JSON.stringify({
         id: 'nocktest',
         error: null,
@@ -367,7 +367,7 @@ describe('Test pool functionality', () => {
     mockSetupDaemons(pool, () => {
       mockSetupSettings(pool, () => {
         nock('http://127.0.0.1:8332')
-          .post('/', body => body.method === 'submitblock')
+          .post('/', (body) => body.method === 'submitblock')
           .reply(200, JSON.stringify({
             id: 'nocktest',
             error: true,
@@ -427,7 +427,7 @@ describe('Test pool functionality', () => {
     mockSetupDaemons(pool, () => {
       mockSetupSettings(pool, () => {
         nock('http://127.0.0.1:8332')
-          .post('/', body => body.method === 'submitblock')
+          .post('/', (body) => body.method === 'submitblock')
           .reply(200, JSON.stringify({
             id: 'nocktest',
             error: null,
@@ -494,7 +494,7 @@ describe('Test pool functionality', () => {
       mockSetupSettings(pool, () => {
         pool.on('pool.share', () => {
           nock('http://127.0.0.1:8332')
-            .post('/', body => body.method === 'getblocktemplate')
+            .post('/', (body) => body.method === 'getblocktemplate')
             .reply(200, JSON.stringify({
               id: 'nocktest',
               error: null,
@@ -502,14 +502,14 @@ describe('Test pool functionality', () => {
             }));
         });
         nock('http://127.0.0.1:8332')
-          .post('/', body => body.method === 'submitblock')
+          .post('/', (body) => body.method === 'submitblock')
           .reply(200, JSON.stringify({
             id: 'nocktest',
             error: null,
             result: null,
           }));
         nock('http://127.0.0.1:8332')
-          .post('/', body => body.method === 'getblock')
+          .post('/', (body) => body.method === 'getblock')
           .reply(200, JSON.stringify({
             id: 'nocktest',
             error: null,
@@ -576,7 +576,7 @@ describe('Test pool functionality', () => {
       mockSetupSettings(pool, () => {
         pool.on('pool.share', () => {
           nock('http://127.0.0.1:8332')
-            .post('/', body => body.method === 'getblocktemplate')
+            .post('/', (body) => body.method === 'getblocktemplate')
             .reply(200, JSON.stringify({
               id: 'nocktest',
               error: null,
@@ -584,14 +584,14 @@ describe('Test pool functionality', () => {
             }));
         });
         nock('http://127.0.0.1:8332')
-          .post('/', body => body.method === 'submitblock')
+          .post('/', (body) => body.method === 'submitblock')
           .reply(200, JSON.stringify({
             id: 'nocktest',
             error: null,
             result: null,
           }));
         nock('http://127.0.0.1:8332')
-          .post('/', body => body.method === 'getblock')
+          .post('/', (body) => body.method === 'getblock')
           .reply(200, JSON.stringify({
             id: 'nocktest',
             error: null,
@@ -662,7 +662,7 @@ describe('Test pool functionality', () => {
       mockSetupSettings(pool, () => {
         pool.on('pool.share', () => {
           nock('http://127.0.0.1:8332')
-            .post('/', body => body.method === 'getblocktemplate')
+            .post('/', (body) => body.method === 'getblocktemplate')
             .reply(200, JSON.stringify({
               id: 'nocktest',
               error: true,
@@ -670,14 +670,14 @@ describe('Test pool functionality', () => {
             }));
         });
         nock('http://127.0.0.1:8332')
-          .post('/', body => body.method === 'submitblock')
+          .post('/', (body) => body.method === 'submitblock')
           .reply(200, JSON.stringify({
             id: 'nocktest',
             error: null,
             result: null,
           }));
         nock('http://127.0.0.1:8332')
-          .post('/', body => body.method === 'getblock')
+          .post('/', (body) => body.method === 'getblock')
           .reply(200, JSON.stringify({
             id: 'nocktest',
             error: null,
@@ -742,7 +742,7 @@ describe('Test pool functionality', () => {
       mockSetupSettings(pool, () => {
         pool.on('pool.share', () => {
           nock('http://127.0.0.1:8332')
-            .post('/', body => body.method === 'getblocktemplate')
+            .post('/', (body) => body.method === 'getblocktemplate')
             .reply(200, JSON.stringify({
               id: 'nocktest',
               error: true,
@@ -805,7 +805,7 @@ describe('Test pool functionality', () => {
         pool.on('pool.share', (data, type) => {
           expect(type).toBe('stale');
           nock('http://127.0.0.1:8332')
-            .post('/', body => body.method === 'getblocktemplate')
+            .post('/', (body) => body.method === 'getblocktemplate')
             .reply(200, JSON.stringify({
               id: 'nocktest',
               error: true,
@@ -840,7 +840,7 @@ describe('Test pool functionality', () => {
         pool.on('pool.share', (data, type) => {
           expect(type).toBe('invalid');
           nock('http://127.0.0.1:8332')
-            .post('/', body => body.method === 'getblocktemplate')
+            .post('/', (body) => body.method === 'getblocktemplate')
             .reply(200, JSON.stringify({
               id: 'nocktest',
               error: true,
@@ -868,7 +868,7 @@ describe('Test pool functionality', () => {
     mockSetupDaemons(pool, () => {
       mockSetupSettings(pool, () => {
         nock('http://127.0.0.1:8332')
-          .post('/', body => body.method === 'getblocktemplate')
+          .post('/', (body) => body.method === 'getblocktemplate')
           .reply(200, JSON.stringify({
             id: 'nocktest',
             error: null,
@@ -891,21 +891,21 @@ describe('Test pool functionality', () => {
     mockSetupDaemons(pool, () => {
       mockSetupSettings(pool, () => {
         nock('http://127.0.0.1:8332')
-          .post('/', body => body.method === 'getblocktemplate')
+          .post('/', (body) => body.method === 'getblocktemplate')
           .reply(200, JSON.stringify({
             id: 'nocktest',
             error: { code: -10 },
             result: null,
           }));
         nock('http://127.0.0.1:8332')
-          .post('/', body => body.method === 'getblockchaininfo')
+          .post('/', (body) => body.method === 'getblockchaininfo')
           .reply(200, JSON.stringify({
             id: 'nocktest',
             error: null,
             result: blockchainDataCopy,
           }));
         nock('http://127.0.0.1:8332')
-          .post('/', body => body.method === 'getpeerinfo')
+          .post('/', (body) => body.method === 'getpeerinfo')
           .reply(200, JSON.stringify({
             id: 'nocktest',
             error: null,
@@ -923,7 +923,7 @@ describe('Test pool functionality', () => {
     mockSetupDaemons(pool, () => {
       mockSetupSettings(pool, () => {
         nock('http://127.0.0.1:8336')
-          .post('/', body => body.method === 'getauxblock')
+          .post('/', (body) => body.method === 'getauxblock')
           .reply(200, JSON.stringify({
             id: 'nocktest',
             error: null,
@@ -948,21 +948,21 @@ describe('Test pool functionality', () => {
     mockSetupDaemons(pool, () => {
       mockSetupSettings(pool, () => {
         nock('http://127.0.0.1:8336')
-          .post('/', body => body.method === 'getauxblock')
+          .post('/', (body) => body.method === 'getauxblock')
           .reply(200, JSON.stringify({
             id: 'nocktest',
             error: { code: -10 },
             result: null,
           }));
         nock('http://127.0.0.1:8336')
-          .post('/', body => body.method === 'getblockchaininfo')
+          .post('/', (body) => body.method === 'getblockchaininfo')
           .reply(200, JSON.stringify({
             id: 'nocktest',
             error: null,
             result: blockchainDataCopy,
           }));
         nock('http://127.0.0.1:8336')
-          .post('/', body => body.method === 'getpeerinfo')
+          .post('/', (body) => body.method === 'getpeerinfo')
           .reply(200, JSON.stringify({
             id: 'nocktest',
             error: null,
@@ -978,7 +978,7 @@ describe('Test pool functionality', () => {
     mockSetupDaemons(pool, () => {
       mockSetupSettings(pool, () => {
         nock('http://127.0.0.1:8336')
-          .post('/', body => body.method === 'getauxblock')
+          .post('/', (body) => body.method === 'getauxblock')
           .reply(200, JSON.stringify({
             id: 'nocktest',
             error: null,
@@ -999,7 +999,7 @@ describe('Test pool functionality', () => {
         mockSetupPrimaryBlockchain(pool, () => {
           mockSetupAuxiliaryBlockchain(pool, () => {
             nock('http://127.0.0.1:8332')
-              .post('/', body => body.method === 'getblocktemplate')
+              .post('/', (body) => body.method === 'getblocktemplate')
               .reply(200, JSON.stringify({
                 id: 'nocktest',
                 error: null,
@@ -1035,7 +1035,7 @@ describe('Test pool functionality', () => {
         mockSetupPrimaryBlockchain(pool, () => {
           mockSetupAuxiliaryBlockchain(pool, () => {
             nock('http://127.0.0.1:8332')
-              .post('/', body => body.method === 'getblocktemplate')
+              .post('/', (body) => body.method === 'getblocktemplate')
               .reply(200, JSON.stringify({
                 id: 'nocktest',
                 error: true,
@@ -1061,7 +1061,7 @@ describe('Test pool functionality', () => {
         mockSetupPrimaryBlockchain(pool, () => {
           mockSetupAuxiliaryBlockchain(pool, () => {
             nock('http://127.0.0.1:8332')
-              .post('/', body => body.method === 'getblocktemplate')
+              .post('/', (body) => body.method === 'getblocktemplate')
               .reply(200, JSON.stringify({
                 id: 'nocktest',
                 error: null,
@@ -1083,7 +1083,7 @@ describe('Test pool functionality', () => {
         mockSetupPrimaryBlockchain(pool, () => {
           mockSetupAuxiliaryBlockchain(pool, () => {
             nock('http://127.0.0.1:8332')
-              .post('/', body => body.method === 'getblocktemplate')
+              .post('/', (body) => body.method === 'getblocktemplate')
               .reply(200, JSON.stringify({
                 id: 'nocktest',
                 error: null,
@@ -1119,7 +1119,7 @@ describe('Test pool functionality', () => {
             mockSetupFirstJob(pool, () => {
               nock('http://127.0.0.1:8332')
                 .persist()
-                .post('/', body => body.method === 'getblocktemplate')
+                .post('/', (body) => body.method === 'getblocktemplate')
                 .reply(200, JSON.stringify({
                   id: 'nocktest',
                   error: null,
@@ -1160,7 +1160,7 @@ describe('Test pool functionality', () => {
             mockSetupFirstJob(pool, () => {
               nock('http://127.0.0.1:8332')
                 .persist()
-                .post('/', body => body.method === 'getblocktemplate')
+                .post('/', (body) => body.method === 'getblocktemplate')
                 .reply(200, JSON.stringify({
                   id: 'nocktest',
                   error: null,
@@ -1168,7 +1168,7 @@ describe('Test pool functionality', () => {
                 }));
               nock('http://127.0.0.1:8336')
                 .persist()
-                .post('/', body => body.method === 'getauxblock')
+                .post('/', (body) => body.method === 'getauxblock')
                 .reply(200, JSON.stringify({
                   id: 'nocktest',
                   error: null,
@@ -1207,7 +1207,7 @@ describe('Test pool functionality', () => {
             mockSetupFirstJob(pool, () => {
               nock('http://127.0.0.1:8332')
                 .persist()
-                .post('/', body => body.method === 'getblocktemplate')
+                .post('/', (body) => body.method === 'getblocktemplate')
                 .reply(200, JSON.stringify({
                   id: 'nocktest',
                   error: null,
@@ -1215,7 +1215,7 @@ describe('Test pool functionality', () => {
                 }));
               nock('http://127.0.0.1:8336')
                 .persist()
-                .post('/', body => body.method === 'getauxblock')
+                .post('/', (body) => body.method === 'getauxblock')
                 .reply(200, JSON.stringify({
                   id: 'nocktest',
                   error: true,
@@ -1258,7 +1258,7 @@ describe('Test pool functionality', () => {
             mockSetupFirstJob(pool, () => {
               nock('http://127.0.0.1:8332')
                 .persist()
-                .post('/', body => body.method === 'getblocktemplate')
+                .post('/', (body) => body.method === 'getblocktemplate')
                 .reply(200, JSON.stringify({
                   id: 'nocktest',
                   error: null,
@@ -1266,7 +1266,7 @@ describe('Test pool functionality', () => {
                 }));
               nock('http://127.0.0.1:8336')
                 .persist()
-                .post('/', body => body.method === 'getauxblock')
+                .post('/', (body) => body.method === 'getauxblock')
                 .reply(200, JSON.stringify({
                   id: 'nocktest',
                   error: null,
@@ -1325,7 +1325,7 @@ describe('Test pool functionality', () => {
             mockSetupFirstJob(pool, () => {
               pool.setupNetwork(() => {
                 nock('http://127.0.0.1:8332')
-                  .post('/', body => body.method === 'getblocktemplate')
+                  .post('/', (body) => body.method === 'getblocktemplate')
                   .reply(200, JSON.stringify({
                     id: 'nocktest',
                     error: null,
@@ -1362,7 +1362,7 @@ describe('Test pool functionality', () => {
             mockSetupFirstJob(pool, () => {
               pool.setupNetwork(() => {
                 nock('http://127.0.0.1:8332')
-                  .post('/', body => body.method === 'getblocktemplate')
+                  .post('/', (body) => body.method === 'getblocktemplate')
                   .reply(200, JSON.stringify({
                     id: 'nocktest',
                     error: true,
@@ -1947,7 +1947,7 @@ describe('Test pool functionality', () => {
     const pool = new Pool(configCopy, configMainCopy, () => {});
     mockSetupDaemons(pool, () => {
       nock('http://127.0.0.1:8332')
-        .post('/', body => body.method === 'validateaddress')
+        .post('/', (body) => body.method === 'validateaddress')
         .reply(200, JSON.stringify({
           id: 'nocktest',
           error: null,
@@ -1964,7 +1964,7 @@ describe('Test pool functionality', () => {
     const pool = new Pool(configCopy, configMainCopy, () => {});
     mockSetupDaemons(pool, () => {
       nock('http://127.0.0.1:8332')
-        .post('/', body => body.method === 'validateaddress')
+        .post('/', (body) => body.method === 'validateaddress')
         .reply(200, JSON.stringify({
           id: 'nocktest',
           error: null,
@@ -1981,7 +1981,7 @@ describe('Test pool functionality', () => {
     const pool = new Pool(configCopy, configMainCopy, () => {});
     mockSetupDaemons(pool, () => {
       nock('http://127.0.0.1:8332')
-        .post('/', body => body.method === 'validateaddress')
+        .post('/', (body) => body.method === 'validateaddress')
         .reply(200, JSON.stringify({
           id: 'nocktest',
           error: null,
@@ -1998,7 +1998,7 @@ describe('Test pool functionality', () => {
     const pool = new Pool(configCopy, configMainCopy, () => {});
     mockSetupDaemons(pool, () => {
       nock('http://127.0.0.1:8332')
-        .post('/', body => body.method === 'validateaddress')
+        .post('/', (body) => body.method === 'validateaddress')
         .reply(200, JSON.stringify({
           id: 'nocktest',
           error: null,
@@ -2015,7 +2015,7 @@ describe('Test pool functionality', () => {
     const pool = new Pool(configCopy, configMainCopy, () => {});
     mockSetupDaemons(pool, () => {
       nock('http://127.0.0.1:8332')
-        .post('/', body => body.method === 'validateaddress')
+        .post('/', (body) => body.method === 'validateaddress')
         .reply(200, JSON.stringify({
           id: 'nocktest',
           error: true,
@@ -2034,7 +2034,7 @@ describe('Test pool functionality', () => {
     const pool = new Pool(configCopy, configMainCopy, () => {});
     mockSetupDaemons(pool, () => {
       nock('http://127.0.0.1:8336')
-        .post('/', body => body.method === 'validateaddress')
+        .post('/', (body) => body.method === 'validateaddress')
         .reply(200, JSON.stringify({
           id: 'nocktest',
           error: null,
@@ -2053,7 +2053,7 @@ describe('Test pool functionality', () => {
     const pool = new Pool(configCopy, configMainCopy, () => {});
     mockSetupDaemons(pool, () => {
       nock('http://127.0.0.1:8336')
-        .post('/', body => body.method === 'validateaddress')
+        .post('/', (body) => body.method === 'validateaddress')
         .reply(200, JSON.stringify({
           id: 'nocktest',
           error: null,
@@ -2092,7 +2092,7 @@ describe('Test pool functionality', () => {
     const pool = new Pool(configCopy, configMainCopy, () => {});
     mockSetupDaemons(pool, () => {
       nock('http://127.0.0.1:8332')
-        .post('/', body => body.method === 'validateaddress')
+        .post('/', (body) => body.method === 'validateaddress')
         .reply(200, JSON.stringify({
           id: 'nocktest',
           error: null,
@@ -2111,14 +2111,14 @@ describe('Test pool functionality', () => {
     const pool = new Pool(configCopy, configMainCopy, () => {});
     mockSetupDaemons(pool, () => {
       nock('http://127.0.0.1:8332')
-        .post('/', body => body.method === 'validateaddress')
+        .post('/', (body) => body.method === 'validateaddress')
         .reply(200, JSON.stringify({
           id: 'nocktest',
           error: null,
           result: { isvalid: true, address: 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq' }
         }));
       nock('http://127.0.0.1:8336')
-        .post('/', body => body.method === 'validateaddress')
+        .post('/', (body) => body.method === 'validateaddress')
         .reply(200, JSON.stringify({
           id: 'nocktest',
           error: null,
@@ -2137,14 +2137,14 @@ describe('Test pool functionality', () => {
     const pool = new Pool(configCopy, configMainCopy, () => {});
     mockSetupDaemons(pool, () => {
       nock('http://127.0.0.1:8332')
-        .post('/', body => body.method === 'validateaddress')
+        .post('/', (body) => body.method === 'validateaddress')
         .reply(200, JSON.stringify({
           id: 'nocktest',
           error: null,
           result: { isvalid: true, address: 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq' }
         }));
       nock('http://127.0.0.1:8336')
-        .post('/', body => body.method === 'validateaddress')
+        .post('/', (body) => body.method === 'validateaddress')
         .reply(200, JSON.stringify({
           id: 'nocktest',
           error: true,

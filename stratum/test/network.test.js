@@ -63,7 +63,7 @@ describe('Test network functionality', () => {
   test('Test network banning capabilities [1]', (done) => {
     const network = new Network(configCopy, configMainCopy, () => {});
     const client = mockClient();
-    client.on('client.ban.kicked', timeLeft => {
+    client.on('client.ban.kicked', (timeLeft) => {
       network.on('network.stopped', () => done());
       expect(timeLeft >= 0).toBeTruthy();
       network.stopNetwork();

@@ -32,7 +32,7 @@ const Loader = function(logger, configMain) {
   // Check Configuration Ports
   this.checkPoolPorts = function(config) {
     const ports = new Set();
-    const currentPorts = config.ports.flatMap(val => val.port);
+    const currentPorts = config.ports.flatMap((val) => val.port);
     for (let i = 0; i < currentPorts.length; i++) {
       const currentPort = currentPorts[i];
       if (ports.has(currentPort)) {

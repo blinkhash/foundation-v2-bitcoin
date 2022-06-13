@@ -47,14 +47,14 @@ describe('Test stratum functionality', () => {
     const logger = new Logger(configMainCopy);
     const stratum = new Stratum(logger, configCopy, configMainCopy);
     nock('http://127.0.0.1:8332')
-      .post('/', body => body.method === 'getpeerinfo')
+      .post('/', (body) => body.method === 'getpeerinfo')
       .reply(200, JSON.stringify({
         id: 'nocktest',
         error: null,
         result: null,
       }));
     nock('http://127.0.0.1:8336')
-      .post('/', body => body.method === 'getpeerinfo')
+      .post('/', (body) => body.method === 'getpeerinfo')
       .reply(200, JSON.stringify({
         id: 'nocktest',
         error: null,
@@ -69,7 +69,7 @@ describe('Test stratum functionality', () => {
       ]));
     nock('http://127.0.0.1:8332')
       .persist()
-      .post('/', body => body.method === 'getblocktemplate')
+      .post('/', (body) => body.method === 'getblocktemplate')
       .reply(200, JSON.stringify({
         id: 'nocktest',
         error: null,
@@ -88,14 +88,14 @@ describe('Test stratum functionality', () => {
     const logger = new Logger(configMainCopy);
     const stratum = new Stratum(logger, configCopy, configMainCopy);
     nock('http://127.0.0.1:8332')
-      .post('/', body => body.method === 'getpeerinfo')
+      .post('/', (body) => body.method === 'getpeerinfo')
       .reply(200, JSON.stringify({
         id: 'nocktest',
         error: null,
         result: null,
       }));
     nock('http://127.0.0.1:8336')
-      .post('/', body => body.method === 'getpeerinfo')
+      .post('/', (body) => body.method === 'getpeerinfo')
       .reply(200, JSON.stringify({
         id: 'nocktest',
         error: null,
@@ -110,7 +110,7 @@ describe('Test stratum functionality', () => {
       ]));
     nock('http://127.0.0.1:8332')
       .persist()
-      .post('/', body => body.method === 'getblocktemplate')
+      .post('/', (body) => body.method === 'getblocktemplate')
       .reply(200, JSON.stringify({
         id: 'nocktest',
         error: null,

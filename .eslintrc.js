@@ -17,6 +17,7 @@ module.exports = {
     'no-multi-spaces': 2,
     'space-in-parens': 2,
     'quotes': [2, 'single'],
+    'arrow-parens': [2, 'always'],
     'brace-style': [2, '1tbs'],
     'no-multiple-empty-lines': 2,
     'prefer-const': 2,

@@ -56,7 +56,7 @@ exports.stratumNetworkText1 = (time) => `No new blocks for ${ time } seconds. Up
 exports.stratumPollingText1 = (coin, height) => `Requested template from primary chain (${ coin }:${ height }) via RPC polling`;
 exports.stratumPollingText2 = (coin, height) => `Requested template from auxiliary chain (${ coin }:${ height }) via RPC polling`;
 exports.stratumRecipientsText1 = () => 'No recipients have been added, which means that no fees will be taken';
-exports.stratumSharesText1 = (difficulty, actual, address, ip) => `A share was accepted at difficulty ${ difficulty }/${ actual } by ${ address } [${ ip }]`;
+exports.stratumSharesText1 = (difficulty, actual, address, ip) => `A share was accepted at difficulty ${ difficulty }/${ actual || 0 } by ${ address } [${ ip }]`;
 exports.stratumSettingsText1 = (error) => `Could not start pool, error with RPC response: ${ error }`;
 exports.stratumSettingsText2 = (request, error) => `Could not start pool, error with RPC command response: ${ request } - ${ error }`;
 exports.stratumSettingsText3 = () => 'The daemon reports that the given address is not valid';

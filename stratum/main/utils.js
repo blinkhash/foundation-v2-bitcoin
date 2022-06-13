@@ -239,7 +239,7 @@ exports.getMerkleSteps = function(transactions) {
   const hashes = exports.convertHashToBuffer(transactions);
   const merkleData = [Buffer.from([], 'hex')].concat(hashes);
   const merkleTreeFull = merkleTree(merkleData, exports.sha256d);
-  return merkleProof(merkleTreeFull, merkleData[0]).slice(1, -1).filter(node => node !== null);
+  return merkleProof(merkleTreeFull, merkleData[0]).slice(1, -1).filter((node) => node !== null);
 };
 
 // Calculate Minimal OPCodes for Buffer

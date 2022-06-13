@@ -66,6 +66,7 @@ const Stratum = function (logger, config, configMain) {
   };
 
   // Setup Pool Stratum Capabilities
+  /* eslint-disable */
   this.setupStratum = function(callback) {
 
     // Build Daemon/Stratum Functionality

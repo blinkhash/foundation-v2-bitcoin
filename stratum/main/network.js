@@ -46,7 +46,7 @@ const Network = function(config, configMain, authorizeFn) {
   this.broadcastMiningJobs = function(template, cleanJobs) {
 
     // Send New Jobs to Clients
-    Object.keys(_this.clients).forEach(clientId => {
+    Object.keys(_this.clients).forEach((clientId) => {
       const client = _this.clients[clientId];
       const parameters = template.handleParameters(cleanJobs);
       client.broadcastMiningJob(parameters);
@@ -90,7 +90,7 @@ const Network = function(config, configMain, authorizeFn) {
 
     // Interval to Clear Old Bans from BannedIPs
     setInterval(() => {
-      Object.keys(_this.bannedIPs).forEach(ip => {
+      Object.keys(_this.bannedIPs).forEach((ip) => {
         const banTime = _this.bannedIPs[ip];
         if (Date.now() - banTime > _this.config.banning.banLength) {
           delete _this.bannedIPs[ip];
@@ -99,7 +99,7 @@ const Network = function(config, configMain, authorizeFn) {
     }, _this.config.banning.purgeInterval);
 
     // Filter Ports for Activity
-    const stratumPorts = _this.config.ports.filter(port => port.enabled);
+    const stratumPorts = _this.config.ports.filter((port) => port.enabled);
 
     // Start Individual Stratum Servers
     let serversStarted = 0;
@@ -134,7 +134,7 @@ const Network = function(config, configMain, authorizeFn) {
   this.stopNetwork = function() {
 
     // Filter Ports for Activity
-    const stratumPorts = _this.config.ports.filter(port => port.enabled);
+    const stratumPorts = _this.config.ports.filter((port) => port.enabled);
 
     // Stop Individual Stratum Servers
     stratumPorts.forEach((port) => {

@@ -110,11 +110,11 @@ const Pool = function(config, configMain, responseFn) {
   this.checkDownloaded = function(daemon) {
     daemon.sendCommands([['getblockchaininfo', []]], false, (results) => {
       const blocks = Math.max(0, results
-        .flatMap(result => result.response)
-        .flatMap(response => response.blocks));
+        .flatMap((result) => result.response)
+        .flatMap((response) => response.blocks));
       daemon.sendCommands([['getpeerinfo', []]], true, (result) => {
         const peers = result.response;
-        const totalBlocks = Math.max(0, peers.flatMap(response => response.startingheight));
+        const totalBlocks = Math.max(0, peers.flatMap((response) => response.startingheight));
         const percent = (blocks / totalBlocks * 100).toFixed(2);
         _this.emitLog('warning', true, _this.text.stratumDownloadedText1(percent, peers.length));
       });
@@ -292,7 +292,7 @@ const Pool = function(config, configMain, responseFn) {
   this.setupPorts = function() {
 
     // Initiailize Each Port w/ VarDiff
-    _this.config.ports.forEach(port => {
+    _this.config.ports.forEach((port) => {
       const difficultyInstance = new Difficulty(port.difficulty);
       if (port.port in _this.difficulty) _this.difficulty[port.port].removeAllListeners();
       _this.difficulty[port.port] = difficultyInstance;
@@ -362,7 +362,7 @@ const Pool = function(config, configMain, responseFn) {
 
     // Calculate Sum of All Recipients
     _this.statistics.feePercentage = 0;
-    _this.config.primary.recipients.forEach(recipient => {
+    _this.config.primary.recipients.forEach((recipient) => {
       _this.statistics.feePercentage += recipient.percentage;
     });
   };
@@ -549,8 +549,8 @@ const Pool = function(config, configMain, responseFn) {
 
       // Send Correct Initial Difficulty to Miner
       const validPorts = _this.config.ports
-        .filter(port => port.port === client.socket.localPort)
-        .filter(port => typeof port.difficulty.initial !== 'undefined');
+        .filter((port) => port.port === client.socket.localPort)
+        .filter((port) => typeof port.difficulty.initial !== 'undefined');
       if (validPorts.length >= 1) client.broadcastDifficulty(validPorts[0].difficulty.initial);
       else client.broadcastDifficulty(8);
 
@@ -597,8 +597,8 @@ const Pool = function(config, configMain, responseFn) {
     _this.network = new Network(_this.config, _this.configMain, _this.authorizeWorker);
     _this.network.on('network.started', () => {
       _this.statistics.ports = _this.config.ports
-        .filter(port => port.enabled)
-        .flatMap(port => port.port);
+        .filter((port) => port.enabled)
+        .flatMap((port) => port.port);
       _this.network.broadcastMiningJobs(_this.manager.currentJob, true);
       callback();
     });

@@ -25,7 +25,7 @@ const Client = function(config, socket, id, authorizeFn) {
   // Send JSON Messages
   this.sendJson = function() {
     let response = '';
-    Object.keys(arguments).forEach(arg => {
+    Object.keys(arguments).forEach((arg) => {
       response += JSON.stringify(arguments[arg]) + '\n';
     });
     _this.socket.write(response);

@@ -42,7 +42,7 @@ describe('Test interface functionality', () => {
 
   test('Test interface initialization [1]', (done) => {
     nock('http://127.0.0.1:8332')
-      .post('/', body => body.method === 'getpeerinfo')
+      .post('/', (body) => body.method === 'getpeerinfo')
       .reply(200, JSON.stringify({
         error: null,
         result: null,
@@ -57,14 +57,14 @@ describe('Test interface functionality', () => {
 
   test('Test interface initialization [2]', (done) => {
     nock('http://127.0.0.1:8332')
-      .post('/', body => body.method === 'getpeerinfo')
+      .post('/', (body) => body.method === 'getpeerinfo')
       .reply(200, JSON.stringify({
         error: null,
         result: null,
         instance: 'nocktest',
       }));
     nock('http://127.0.0.2:8332')
-      .post('/', body => body.method === 'getpeerinfo')
+      .post('/', (body) => body.method === 'getpeerinfo')
       .reply(200, JSON.stringify({
         error: null,
         result: null,
@@ -87,7 +87,7 @@ describe('Test interface functionality', () => {
 
   test('Test interface commands [1]', (done) => {
     nock('http://127.0.0.1:8332')
-      .post('/', body => body.method === 'getblocktemplate')
+      .post('/', (body) => body.method === 'getblocktemplate')
       .reply(200, JSON.stringify({
         error: null,
         result: null,
@@ -104,7 +104,7 @@ describe('Test interface functionality', () => {
 
   test('Test interface commands [2]', (done) => {
     nock('http://127.0.0.1:8332')
-      .post('/', body => body.method === 'getblocktemplate')
+      .post('/', (body) => body.method === 'getblocktemplate')
       .reply(401, JSON.stringify({
         error: true,
         result: null,
@@ -182,7 +182,7 @@ describe('Test interface functionality', () => {
 
   test('Test interface commands [7]', (done) => {
     nock('http://127.0.0.1:8332')
-      .post('/', body => body.method === 'getblocktemplate')
+      .post('/', (body) => body.method === 'getblocktemplate')
       .reply(200, null);
     const daemon = new Interface(daemonsCopy);
     const requests = [['getblocktemplate', []]];
@@ -195,7 +195,7 @@ describe('Test interface functionality', () => {
 
   test('Test interface commands [8]', (done) => {
     nock('http://127.0.0.1:8332')
-      .post('/', body => body.method === 'getblocktemplate')
+      .post('/', (body) => body.method === 'getblocktemplate')
       .reply(200, 'blajahahge');
     const daemon = new Interface(daemonsCopy);
     const requests = [['getblocktemplate', []]];
