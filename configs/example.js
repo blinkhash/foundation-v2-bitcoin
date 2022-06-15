@@ -45,7 +45,7 @@ config.settings.jobRebroadcastTimeout = 60000; // ms;
 
 // Miscellaneous Configuration
 config.primary = {};
-config.primary.address = 'example';
+config.primary.address = '[address]';
 
 // Coin Configuration
 config.primary.coin = {};
@@ -66,7 +66,7 @@ config.primary.daemons.push(daemons1);
 config.primary.recipients = [];
 
 const recipient1 = {};
-recipient1.address = 'example';
+recipient1.address = '[address]';
 recipient1.percentage = 0.05;
 config.primary.recipients.push(recipient1);
 

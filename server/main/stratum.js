@@ -30,10 +30,20 @@ const Stratum = function (logger, config, configMain) {
     });
 
     // Handle Stratum Share Events
-    _this.stratum.on('pool.share', (shareData) => {
-      const address = shareData.addrPrimary.split('.')[0];
-      const text = _this.text.stratumSharesText1(shareData.difficulty, shareData.shareDiff, address, shareData.ip);
-      _this.logger['log']('Pool', _this.config.name, [text]);
+    _this.stratum.on('pool.share', (shareData, shareType, accepted) => {
+
+      // Processed Share was Accepted
+      if (shareType === 'valid') {
+        const address = shareData.addrPrimary.split('.')[0];
+        const text = _this.text.stratumSharesText1(shareData.difficulty, shareData.shareDiff, address, shareData.ip);
+        _this.logger['log']('Pool', _this.config.name, [text]);
+
+      // Processed Share was Rejected
+      } else {
+        const address = shareData.addrPrimary.split('.')[0];
+        const text = _this.text.stratumSharesText2(shareData.error, address, shareData.ip);
+        _this.logger['error']('Pool', _this.config.name, [text]);
+      }
     });
   };
 
