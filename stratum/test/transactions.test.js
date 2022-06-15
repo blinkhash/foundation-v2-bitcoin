@@ -64,7 +64,7 @@ describe('Test transactions functionality', () => {
     expect(transaction[0].slice(0, -5)).toStrictEqual(Buffer.from('04000000010000000000000000000000000000000000000000000000000000000000000000ffffffff0f5104', 'hex'));
     expect(transaction[1]).toStrictEqual(Buffer.from('000000000200f2052a01000000160014e8df018c7e326cc253faac7e46cdc51e68542c420000000000000000266a24aa21a9ede2f61c3f71d1defd3fa999dfa36953755c690689799962b48bebd836974e8cf900000000', 'hex'));
   });
-  //
+  
   test('Test main transaction builder [6]', () => {
     delete rpcDataCopy.default_witness_commitment;
     const transaction = new Transactions(configCopy).handleGeneration(rpcDataCopy, extraNonce);

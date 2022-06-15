@@ -30,7 +30,7 @@ const Stratum = function (logger, config, configMain) {
     });
 
     // Handle Stratum Share Events
-    _this.stratum.on('pool.share', (shareData, shareType, accepted) => {
+    _this.stratum.on('pool.share', (shareData, shareType) => {
 
       // Processed Share was Accepted
       if (shareType === 'valid') {
