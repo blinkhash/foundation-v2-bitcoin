@@ -30,7 +30,7 @@
     "clean": "eslint . --ext .js --ignore-pattern node_modules/",
     "clean:fix": "eslint . --ext .js --fix --ignore-pattern node_modules/",
     "test": "jest --coverage",
-    "deploy": "npm run clean:fix && npm run test"
+    "deploy": "npm install && npm run clean:fix && npm run test"
   },
   "contributors": [],
   "repository": {
