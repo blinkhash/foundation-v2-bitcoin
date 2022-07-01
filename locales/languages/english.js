@@ -10,20 +10,13 @@ exports.startingMessageText3 = (network) => `Active network: ${ network }`;
 exports.startingMessageText4 = (ports) => `Active stratum ports: ${ ports }`;
 exports.startingMessageText5 = (fee) => `Active recipient fee: ${ fee }%`;
 exports.startingMessageText6 = (height) => `Current block height: ${ height }`;
-exports.startingMessageText7 = (difficulty) => `Current block difficulty: ${ difficulty }`;
-exports.startingMessageText8 = (difficulty) => `Current network difficulty: ${ difficulty }`;
-exports.startingMessageText9 = (peers) => `Current peer count: ${ peers }`;
-exports.startingMessageText10 = () => 'Server initialized successfully ...';
+exports.startingMessageText7 = (difficulty) => `Current network difficulty: ${ difficulty }`;
+exports.startingMessageText8 = (peers) => `Current peer count: ${ peers }`;
+exports.startingMessageText9 = () => 'Server initialized successfully ...';
 
 // Loader Text
-exports.loaderAlgorithmsText1 = (algorithm) => `The requested mining algorithm ("${ algorithm }") is unsupported. Check your configuration files`;
-exports.loaderAlgorithmsText2 = (algorithm) => `The requested block algorithm ("${ algorithm }") is unsupported. Check your configuration files`;
-exports.loaderAlgorithmsText3 = (algorithm) => `The requested coinbase algorithm ("${ algorithm }") is unsupported. Check your configuration files`;
 exports.loaderDaemonsText1 = () => 'There are no primary daemons configured, so the pool cannot be started. Check your configuration files';
 exports.loaderDaemonsText2 = () => 'There are no auxiliary daemons configured, so the pool cannot be started. Check your configuration files';
-exports.loaderNamesText1 = () => 'There is no pool name passed in. Check your configuration files';
-exports.loaderNamesText2 = () => 'Pool names are only allowed to be a single word. Check your configuration files';
-exports.loaderNamesText3 = () => 'Two or more pool names are overlapping. Check your configuration files';
 exports.loaderPortsText1 = (currentPort) => `Two or more ports are overlapping on ${ currentPort }. Check your configuration files`;
 exports.loaderRecipientsText1 = () => 'The recipient percentage is greater than 100%. Check your configuration files';
 exports.loaderRecipientsText2 = () => 'The recipient percentage is greater than 40%. Are you sure that you configured it properly?';
