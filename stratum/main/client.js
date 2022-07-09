@@ -121,17 +121,17 @@ const Client = function(config, socket, id, authorizeFn) {
   this.validateData = function(data) {
 
     // Client is Flooding Server
-    const buffer = _this.messages + data;
-    if (Buffer.byteLength(buffer, 'utf8') > 10240) {
+    _this.messages += data;
+    if (Buffer.byteLength(_this.messages, 'utf8') > 10240) {
       _this.emit('client.socket.flooded');
       _this.socket.destroy();
       return;
     }
 
     // Handle Individual Messages
-    if (buffer.indexOf('\n') !== -1) {
-      const messages = buffer.split('\n');
-      const incomplete = buffer.slice(-1) === '\n' ? '' : messages.pop();
+    if (_this.messages.indexOf('\n') !== -1) {
+      const messages = _this.messages.split('\n');
+      const incomplete = _this.messages.slice(-1) === '\n' ? '' : messages.pop();
       messages.forEach((message) => {
         if (message === '') return;
         try {
