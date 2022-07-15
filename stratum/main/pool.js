@@ -379,26 +379,20 @@ const Pool = function(config, configMain, responseFn) {
     // Handle Shares on Submission
     _this.manager.on('manager.share', (shareData, auxShareData, blockValid) => {
 
-      // Calculate Status of Submitted Share
-      let shareType = 'valid';
-      if (shareData.error && shareData.error === 'job not found') {
-        shareType = 'stale';
-      } else if (shareData.error) {
-        shareType = 'invalid';
-      }
+      const shareValid = typeof shareData.error === 'undefined';
+      const auxBlockValid = _this.checkAuxiliary(auxShareData);
 
       // Process Auxiliary Submission
-      const auxBlockValid = _this.checkAuxiliary(auxShareData);
-      if (shareType === 'valid' && auxBlockValid) {
+      if (!shareData.error && auxBlockValid) {
         _this.handleAuxiliary(auxShareData, true, (accepted, outputData) => {
-          _this.emit('pool.share', outputData, shareType, accepted);
+          _this.emit('pool.share', outputData, shareValid, accepted);
           _this.emitLog('special', false, _this.text.stratumManagerText2());
         });
       }
 
       // Process Share/Primary Submission
       _this.handlePrimary(shareData, blockValid, (accepted, outputData) => {
-        _this.emit('pool.share', outputData, shareType, accepted);
+        _this.emit('pool.share', outputData, shareValid, accepted);
         _this.handlePrimaryTemplate(auxBlockValid, (error, result, newBlock) => {
           if (newBlock && blockValid) {
             _this.emitLog('special', false, _this.text.stratumManagerText1());

@@ -29,10 +29,10 @@ const Stratum = function (logger, config, configMain) {
     });
 
     // Handle Stratum Share Events
-    _this.stratum.on('pool.share', (shareData, shareType) => {
+    _this.stratum.on('pool.share', (shareData, shareValid) => {
 
       // Processed Share was Accepted
-      if (shareType === 'valid') {
+      if (shareValid) {
         const address = shareData.addrPrimary.split('.')[0];
         const text = _this.text.stratumSharesText1(shareData.difficulty, shareData.shareDiff, address, shareData.ip);
         _this.logger['log']('Pool', _this.config.name, [text]);

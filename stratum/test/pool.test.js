@@ -492,7 +492,8 @@ describe('Test pool functionality', () => {
     });
     mockSetupDaemons(pool, () => {
       mockSetupSettings(pool, () => {
-        pool.on('pool.share', () => {
+        pool.on('pool.share', (data, type) => {
+          expect(type).toBe(true);
           nock('http://127.0.0.1:8332')
             .post('/', (body) => body.method === 'getblocktemplate')
             .reply(200, JSON.stringify({
@@ -574,7 +575,8 @@ describe('Test pool functionality', () => {
     });
     mockSetupDaemons(pool, () => {
       mockSetupSettings(pool, () => {
-        pool.on('pool.share', () => {
+        pool.on('pool.share', (data, type) => {
+          expect(type).toBe(true);
           nock('http://127.0.0.1:8332')
             .post('/', (body) => body.method === 'getblocktemplate')
             .reply(200, JSON.stringify({
@@ -660,7 +662,8 @@ describe('Test pool functionality', () => {
     });
     mockSetupDaemons(pool, () => {
       mockSetupSettings(pool, () => {
-        pool.on('pool.share', () => {
+        pool.on('pool.share', (data, type) => {
+          expect(type).toBe(true);
           nock('http://127.0.0.1:8332')
             .post('/', (body) => body.method === 'getblocktemplate')
             .reply(200, JSON.stringify({
@@ -740,7 +743,8 @@ describe('Test pool functionality', () => {
     });
     mockSetupDaemons(pool, () => {
       mockSetupSettings(pool, () => {
-        pool.on('pool.share', () => {
+        pool.on('pool.share', (data, type) => {
+          expect(type).toBe(true);
           nock('http://127.0.0.1:8332')
             .post('/', (body) => body.method === 'getblocktemplate')
             .reply(200, JSON.stringify({
@@ -803,7 +807,7 @@ describe('Test pool functionality', () => {
     mockSetupDaemons(pool, () => {
       mockSetupSettings(pool, () => {
         pool.on('pool.share', (data, type) => {
-          expect(type).toBe('stale');
+          expect(type).toBe(false);
           nock('http://127.0.0.1:8332')
             .post('/', (body) => body.method === 'getblocktemplate')
             .reply(200, JSON.stringify({
@@ -838,7 +842,7 @@ describe('Test pool functionality', () => {
     mockSetupDaemons(pool, () => {
       mockSetupSettings(pool, () => {
         pool.on('pool.share', (data, type) => {
-          expect(type).toBe('invalid');
+          expect(type).toBe(false);
           nock('http://127.0.0.1:8332')
             .post('/', (body) => body.method === 'getblocktemplate')
             .reply(200, JSON.stringify({
