@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const events = require('events');
 const utils = require('./utils');
+const uuid = require('uuid');
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -17,7 +18,6 @@ const Network = function(config, configMain, authorizeFn) {
 
   // Network Variables
   this.bannedIPs = {};
-  this.counter = utils.subscriptionCounter();
   this.clients = {};
   this.servers = {};
   this.timeoutInterval = null;
@@ -46,8 +46,8 @@ const Network = function(config, configMain, authorizeFn) {
   this.broadcastMiningJobs = function(template, cleanJobs) {
 
     // Send New Jobs to Clients
-    Object.keys(_this.clients).forEach((clientId) => {
-      const client = _this.clients[clientId];
+    Object.keys(_this.clients).forEach((id) => {
+      const client = _this.clients[id];
       const parameters = template.handleParameters(cleanJobs);
       client.broadcastMiningJob(parameters);
     });
@@ -64,7 +64,7 @@ const Network = function(config, configMain, authorizeFn) {
 
     // Establish New Stratum Client
     socket.setKeepAlive(true);
-    const subscriptionId = _this.counter.next();
+    const subscriptionId = uuid.v4();
     const client = new Client(_this.config, socket, subscriptionId, authorizeFn);
     _this.clients[subscriptionId] = client;
     _this.emit('client.connected', client);

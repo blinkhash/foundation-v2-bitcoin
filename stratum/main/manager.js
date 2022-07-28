@@ -51,12 +51,10 @@ const Manager = function(config, configMain) {
   };
 
   // Process Submitted Share
-  this.handleShare = function(
-    jobId, previousDifficulty, difficulty, ipAddress, port, addrPrimary,
-    addrAuxiliary, submission) {
+  this.handleShare = function(jobId, client, submission) {
 
     // Main Submission Variables
-    const identifier = _this.configMain.identifier || '';
+    const difficulty = client.difficulty;
     const submitTime = Date.now() / 1000 | 0;
     const job = _this.validJobs[jobId];
     const nTimeInt = parseInt(submission.nTime, 16);
@@ -70,12 +68,13 @@ const Manager = function(config, configMain) {
     const shareError = function(error) {
       _this.emit('manager.share', {
         job: jobId,
-        ip: ipAddress,
-        port: port,
-        addrPrimary: addrPrimary,
-        addrAuxiliary: addrAuxiliary,
+        id: client.id,
+        ip: client.socket.remoteAddress,
+        port: client.socket.localPort,
+        addrPrimary: client.addrPrimary,
+        addrAuxiliary: client.addrAuxiliary,
         difficulty: difficulty,
-        identifier: identifier,
+        identifier: _this.configMain.identifier || '',
         error: error[1],
       }, false);
       return { error: error, response: null };
@@ -97,7 +96,7 @@ const Manager = function(config, configMain) {
     if (submission.nonce.length !== 8) {
       return shareError([20, 'incorrect size of nonce']);
     }
-    if (!addrPrimary) {
+    if (!client.addrPrimary) {
       return shareError([20, 'worker address isn\'t set properly']);
     }
     if (!job.handleSubmissions([submission.extraNonce1, submission.extraNonce2, submission.nTime, submission.nonce])) {
@@ -144,8 +143,8 @@ const Manager = function(config, configMain) {
       blockValid = true;
     } else {
       if (shareDiff / difficulty < 0.99) {
-        if (previousDifficulty && shareDiff >= previousDifficulty) {
-          difficulty = previousDifficulty;
+        if (client.previousDifficulty && shareDiff >= client.previousDifficulty) {
+          difficulty = client.previousDifficulty;
         } else {
           return shareError([23, 'low difficulty share of ' + shareDiff]);
         }
@@ -155,10 +154,11 @@ const Manager = function(config, configMain) {
     // Build Primary Share Object Data
     const shareData = {
       job: jobId,
-      ip: ipAddress,
-      port: port,
-      addrPrimary: addrPrimary,
-      addrAuxiliary: addrAuxiliary,
+      id: client.id,
+      ip: client.socket.remoteAddress,
+      port: client.socket.localPort,
+      addrPrimary: client.addrPrimary,
+      addrAuxiliary: client.addrAuxiliary,
       blockDiffPrimary : blockDiffAdjusted,
       blockType: blockValid ? 'primary' : 'share',
       coinbase: coinbaseBuffer,
@@ -168,17 +168,18 @@ const Manager = function(config, configMain) {
       header: headerHash,
       headerDiff: headerBigInt,
       height: job.rpcData.height,
-      identifier: identifier,
+      identifier: _this.configMain.identifier || '',
       reward: job.rpcData.coinbasevalue,
       shareDiff: shareDiff.toFixed(8),
     };
 
     const auxShareData = {
       job: jobId,
-      ip: ipAddress,
-      port: port,
-      addrPrimary: addrPrimary,
-      addrAuxiliary: addrAuxiliary,
+      id: client.id,
+      ip: client.socket.remoteAddress,
+      port: client.socket.localPort,
+      addrPrimary: client.addrPrimary,
+      addrAuxiliary: client.addrAuxiliary,
       blockDiffPrimary : blockDiffAdjusted,
       blockType: 'auxiliary',
       coinbase: coinbaseBuffer,
@@ -187,7 +188,7 @@ const Manager = function(config, configMain) {
       hex: blockHex,
       header: headerHash,
       headerDiff: headerBigInt,
-      identifier: identifier,
+      identifier: _this.configMain.identifier || '',
       shareDiff: shareDiff.toFixed(8),
     };
 

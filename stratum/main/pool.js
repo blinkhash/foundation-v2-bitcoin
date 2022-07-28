@@ -143,6 +143,31 @@ const Pool = function(config, configMain, responseFn) {
     });
   };
 
+  // Check for New Primary Block Template
+  this.checkPrimaryTemplate = function(callback) {
+
+    // Build Daemon Commands
+    const commands = [['getblockchaininfo', []]];
+
+    // Check Saved Blockchain Data
+    _this.primary.daemon.sendCommands(commands, true, (result) => {
+      if (result.error) {
+        _this.emitLog('error', false, _this.text.stratumTemplateText1(result.instance.host, JSON.stringify(result.error)));
+        callback(result.error);
+      } else if (!_this.primary.height || !_this.primary.previousblockhash) {
+        _this.primary.height = result.response.blocks;
+        _this.primary.previousblockhash = result.response.bestblockhash;
+        callback(null, true);
+      } else if ((_this.primary.height !== result.response.blocks) || (_this.primary.previousblockhash !== result.response.bestblockhash)) {
+        _this.primary.height = result.response.blocks;
+        _this.primary.previousblockhash = result.response.bestblockhash;
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    });
+  }
+
   // Process Primary Block Template
   this.handlePrimaryTemplate = function(newBlock, callback) {
 
@@ -212,6 +237,35 @@ const Pool = function(config, configMain, responseFn) {
       }
     });
   };
+
+  // Check for New Auxiliary Block Template
+  this.checkAuxiliaryTemplate = function(callback) {
+
+    // Build Daemon Commands
+    const commands = [['getblockchaininfo', []]];
+
+    // Check Saved Blockchain Data
+    if (_this.auxiliary.enabled) {
+      _this.auxiliary.daemon.sendCommands(commands, true, (result) => {
+        if (result.error) {
+          _this.emitLog('error', false, _this.text.stratumTemplateText2(result.instance.host, JSON.stringify(result.error)));
+          callback(result.error);
+        } else if (!_this.auxiliary.height || !_this.auxiliary.previousblockhash) {
+          _this.auxiliary.height = result.response.blocks;
+          _this.auxiliary.previousblockhash = result.response.bestblockhash;
+          callback(null, true);
+        } else if ((_this.auxiliary.height !== result.response.blocks) || (_this.auxiliary.previousblockhash !== result.response.bestblockhash)) {
+          _this.auxiliary.height = result.response.blocks;
+          _this.auxiliary.previousblockhash = result.response.bestblockhash;
+          callback(null, true);
+        } else {
+          callback(null, false);
+        }
+      });
+    } else {
+      callback(null, false);
+    }
+  }
 
   // Process Auxiliary Block Template
   this.handleAuxiliaryTemplate = function(callback) {
@@ -475,12 +529,22 @@ const Pool = function(config, configMain, responseFn) {
     setInterval(() => {
       if (pollingFlag === false) {
         pollingFlag = true;
-        _this.handleAuxiliaryTemplate((auxError, auxResult, auxUpdate) => {
-          _this.handlePrimaryTemplate(auxUpdate, (error, result, update) => {
-            pollingFlag = false;
-            if (update) _this.emitLog('log', true, _this.text.stratumPollingText1(_this.config.primary.coin.name, result.height));
-            if (auxUpdate) _this.emitLog('log', true, _this.text.stratumPollingText2(_this.config.auxiliary.coin.name, auxResult.height));
-          });
+        _this.checkAuxiliaryTemplate((auxError) => {
+          if (!auxError) {
+            _this.handleAuxiliaryTemplate((auxError, auxResult, auxUpdate) => {
+              _this.checkPrimaryTemplate((error, update) => {
+                if (!error && update) {
+                  _this.handlePrimaryTemplate(auxUpdate, (error, result, update) => {
+                    pollingFlag = false;
+                    if (update) _this.emitLog('log', true, _this.text.stratumPollingText1(_this.config.primary.coin.name, result.height));
+                    if (auxUpdate) _this.emitLog('log', true, _this.text.stratumPollingText2(_this.config.auxiliary.coin.name, auxResult.height));
+                  });
+                } else {
+                  pollingFlag = false;
+                }
+              })
+            });
+          }
         });
       }
     }, pollingInterval);
@@ -568,18 +632,7 @@ const Pool = function(config, configMain, responseFn) {
       };
 
       // Submit Share to Job Manager
-      const result = _this.manager.handleShare(
-        message.params[1],
-        client.previousDifficulty,
-        client.difficulty,
-        client.socket.remoteAddress,
-        client.socket.localPort,
-        client.addrPrimary,
-        client.addrAuxiliary,
-        submission,
-      );
-
-      // Return Job Manager Response
+      const result = _this.manager.handleShare(message.params[1], client, submission);
       callback(result.error, result.response ? true : null);
     });
   };

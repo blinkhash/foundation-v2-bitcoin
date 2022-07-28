@@ -90,7 +90,7 @@ describe('Test network functionality', () => {
     const template = new Template(jobId.toString(16), configCopy, rpcDataCopy, extraNonce, null);
     const socket = mockSocket();
     network.handleClient(socket);
-    const client = network.clients['deadbeefcafebabe0100000000000000'];
+    const client = network.clients[Object.keys(network.clients)[0]];
     client.on('client.socket.timeout', (timeout) => {
       network.on('network.stopped', () => done());
       expect(timeout).toBe('The last submitted share was 0 seconds ago');
@@ -104,7 +104,7 @@ describe('Test network functionality', () => {
     const network = new Network(configCopy, configMainCopy, () => {});
     const socket = mockSocket();
     network.handleClient(socket);
-    const client = network.clients['deadbeefcafebabe0100000000000000'];
+    const client = network.clients[Object.keys(network.clients)[0]];
     network.on('client.banned', () => {
       network.on('network.stopped', () => done());
       expect(Object.keys(network.bannedIPs).length).toBe(1);
@@ -119,7 +119,7 @@ describe('Test network functionality', () => {
     const network = new Network(configCopy, configMainCopy, () => {});
     const socket = mockSocket();
     network.handleClient(socket);
-    const client = network.clients['deadbeefcafebabe0100000000000000'];
+    const client = network.clients[Object.keys(network.clients)[0]];
     network.on('client.disconnected', () => {
       network.on('network.stopped', () => done());
       expect(Object.keys(network.clients).length).toBe(0);

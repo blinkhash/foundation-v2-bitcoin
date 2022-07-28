@@ -491,20 +491,6 @@ exports.sha256d = function(buffer) {
   return exports.sha256(exports.sha256(buffer));
 };
 
-// Increment Count for Each Subscription
-/* istanbul ignore next */
-exports.subscriptionCounter = function() {
-  let count = 0;
-  const padding = 'deadbeefcafebabe';
-  return {
-    next: function() {
-      count += 1;
-      if (Number.MAX_VALUE === count) count = 0;
-      return padding + exports.packUInt64LE(count).toString('hex');
-    }
-  };
-};
-
 // Generate Reverse Buffer from Input Hash
 exports.uint256BufferFromHash = function(hex) {
   let fromHex = Buffer.from(hex, 'hex');

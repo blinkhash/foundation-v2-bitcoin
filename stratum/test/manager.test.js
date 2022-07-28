@@ -1,10 +1,44 @@
 const Manager = require('../main/manager');
 const config = require('../../configs/example');
 const configMain = require('../../configs/main');
+const events = require('events');
 const testdata = require('../../daemon/test/daemon.mock');
 
 config.primary.address = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
 config.primary.recipients = [];
+
+////////////////////////////////////////////////////////////////////////////////
+
+function mockSocket() {
+  const socket = new events.EventEmitter();
+  socket.remoteAddress = '127.0.0.1',
+  socket.destroy = () => {};
+  socket.setEncoding = () => {};
+  socket.setKeepAlive = () => {};
+  socket.write = (data) => {
+    socket.emit('log', data);
+  };
+  return socket;
+}
+
+function mockClient() {
+  const socket = mockSocket();
+  const client = new events.EventEmitter();
+  client.id = 'test';
+  client.addrPrimary = '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2';
+  client.addrAuxiliary = '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2';
+  client.previousDifficulty = 0;
+  client.difficulty = 1,
+  client.extraNonce1 = 0,
+  client.socket = socket;
+  client.socket.localPort = 3002;
+  client.sendLabel = () => {
+    return 'client [example]';
+  };
+  client.broadcastMiningJob = () => {};
+  client.broadcastDifficulty = () => {};
+  return client;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -64,7 +98,8 @@ describe('Test manager functionality', () => {
       versionMask: '1fffe000',
       asicboost: true,
     };
-    const response = manager.handleShare(1, 0, 0, 'ip_addr', 'port', 'addr1', 'addr2', submission);
+    const client = mockClient();
+    const response = manager.handleShare(1, client, submission);
     expect(response.error[0]).toBe(20);
     expect(response.error[1]).toBe('incorrect size of extranonce2');
   });
@@ -81,7 +116,8 @@ describe('Test manager functionality', () => {
       versionMask: '1fffe000',
       asicboost: true,
     };
-    const response = manager.handleShare(0, 0, 0, 'ip_addr', 'port', 'addr1', 'addr2', submission);
+    const client = mockClient();
+    const response = manager.handleShare(0, client, submission);
     expect(response.error[0]).toBe(21);
     expect(response.error[1]).toBe('job not found');
   });
@@ -98,7 +134,8 @@ describe('Test manager functionality', () => {
       versionMask: '1fffe000',
       asicboost: true,
     };
-    const response = manager.handleShare(1, 0, 0, 'ip_addr', 'port', 'addr1', 'addr2', submission);
+    const client = mockClient();
+    const response = manager.handleShare(1, client, submission);
     expect(response.error[0]).toBe(20);
     expect(response.error[1]).toBe('incorrect size of ntime');
   });
@@ -115,7 +152,8 @@ describe('Test manager functionality', () => {
       versionMask: '1fffe000',
       asicboost: true,
     };
-    const response = manager.handleShare(1, 0, 0, 'ip_addr', 'port', 'addr1', 'addr2', submission);
+    const client = mockClient();
+    const response = manager.handleShare(1, client, submission);
     expect(response.error[0]).toBe(20);
     expect(response.error[1]).toBe('ntime out of range');
   });
@@ -132,7 +170,8 @@ describe('Test manager functionality', () => {
       versionMask: '1fffe000',
       asicboost: true,
     };
-    const response = manager.handleShare(1, 0, 0, 'ip_addr', 'port', 'addr1', 'addr2', submission);
+    const client = mockClient();
+    const response = manager.handleShare(1, client, submission);
     expect(response.error[0]).toBe(20);
     expect(response.error[1]).toBe('incorrect size of nonce');
   });
@@ -149,7 +188,9 @@ describe('Test manager functionality', () => {
       versionMask: '1fffe000',
       asicboost: true,
     };
-    const response = manager.handleShare(1, 0, 0, 'ip_addr', 'port', null, null, submission);
+    const client = mockClient();
+    client.addrPrimary = null;
+    const response = manager.handleShare(1, client, submission);
     expect(response.error[0]).toBe(20);
     expect(response.error[1]).toBe('worker address isn\'t set properly');
   });
@@ -166,8 +207,9 @@ describe('Test manager functionality', () => {
       versionMask: '1fffe000',
       asicboost: true,
     };
-    manager.handleShare(1, 0.0000001, 0.0000001, 'ip_addr', 'port', 'addr1', 'addr2', submission);
-    const response = manager.handleShare(1, 0.0000001, 0.0000001, 'ip_addr', 'port', 'addr1', 'addr2', submission);
+    const client = mockClient();
+    manager.handleShare(1, client, submission);
+    const response = manager.handleShare(1, client, submission);
     expect(response.error[0]).toBe(22);
     expect(response.error[1]).toBe('duplicate share');
   });
@@ -184,7 +226,8 @@ describe('Test manager functionality', () => {
       versionMask: '1fffe000',
       asicboost: true,
     };
-    const response = manager.handleShare(1, 0.0000001, 0.0000001, 'ip_addr', 'port', 'addr1', 'addr2', submission);
+    const client = mockClient();
+    const response = manager.handleShare(1, client, submission);
     expect(response.error[0]).toBe(20);
     expect(response.error[1]).toBe('invalid version bit');
   });
@@ -201,7 +244,10 @@ describe('Test manager functionality', () => {
       versionMask: '1fffe000',
       asicboost: true,
     };
-    const response = manager.handleShare(1, 1, 1, 'ip_addr', 'port', 'addr1', 'addr2', submission);
+    const client = mockClient();
+    client.previousDifficulty = 1;
+    client.difficulty = 1;
+    const response = manager.handleShare(1, client, submission);
     expect(response.error[0]).toBe(23);
     expect(response.error[1].slice(0, 23)).toBe('low difficulty share of');
   });
@@ -218,7 +264,10 @@ describe('Test manager functionality', () => {
       versionMask: '1fffe000',
       asicboost: false,
     };
-    const response = manager.handleShare(1, 1, 1, 'ip_addr', 'port', 'addr1', 'addr2', submission);
+    const client = mockClient();
+    client.previousDifficulty = 1;
+    client.difficulty = 1;
+    const response = manager.handleShare(1, client, submission);
     expect(response.error[0]).toBe(23);
     expect(response.error[1].slice(0, 23)).toBe('low difficulty share of');
   });

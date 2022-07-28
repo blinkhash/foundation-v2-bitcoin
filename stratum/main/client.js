@@ -6,9 +6,9 @@ const events = require('events');
 const Client = function(config, socket, id, authorizeFn) {
 
   const _this = this;
+  this.id = id;
   this.config = config;
   this.socket = socket;
-  this.id = id;
   this.authorizeFn = authorizeFn;
 
   // Client Variables

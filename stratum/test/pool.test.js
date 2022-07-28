@@ -1129,6 +1129,14 @@ describe('Test pool functionality', () => {
                   error: null,
                   result: rpcDataCopy,
                 }));
+              nock('http://127.0.0.1:8332')
+                .persist()
+                .post('/', (body) => body.method === 'getblockchaininfo')
+                .reply(200, JSON.stringify({
+                  id: 'nocktest',
+                  error: null,
+                  result: blockchainDataCopy,
+                }));
               pool.setupBlockPolling();
             });
           });
@@ -1178,6 +1186,22 @@ describe('Test pool functionality', () => {
                   error: null,
                   result: auxDataCopy,
                 }));
+              nock('http://127.0.0.1:8332')
+                .persist()
+                .post('/', (body) => body.method === 'getblockchaininfo')
+                .reply(200, JSON.stringify({
+                  id: 'nocktest',
+                  error: null,
+                  result: blockchainDataCopy,
+                }));
+              nock('http://127.0.0.1:8336')
+                .persist()
+                .post('/', (body) => body.method === 'getblockchaininfo')
+                .reply(200, JSON.stringify({
+                  id: 'nocktest',
+                  error: null,
+                  result: blockchainDataCopy,
+                }));
               pool.setupBlockPolling();
             });
           });
@@ -1224,6 +1248,22 @@ describe('Test pool functionality', () => {
                   id: 'nocktest',
                   error: true,
                   result: null,
+                }));
+              nock('http://127.0.0.1:8332')
+                .persist()
+                .post('/', (body) => body.method === 'getblockchaininfo')
+                .reply(200, JSON.stringify({
+                  id: 'nocktest',
+                  error: null,
+                  result: blockchainDataCopy,
+                }));
+              nock('http://127.0.0.1:8336')
+                .persist()
+                .post('/', (body) => body.method === 'getblockchaininfo')
+                .reply(200, JSON.stringify({
+                  id: 'nocktest',
+                  error: null,
+                  result: blockchainDataCopy,
                 }));
               pool.setupBlockPolling();
             });
@@ -1275,6 +1315,22 @@ describe('Test pool functionality', () => {
                   id: 'nocktest',
                   error: null,
                   result: auxDataCopy,
+                }));
+              nock('http://127.0.0.1:8332')
+                .persist()
+                .post('/', (body) => body.method === 'getblockchaininfo')
+                .reply(200, JSON.stringify({
+                  id: 'nocktest',
+                  error: null,
+                  result: blockchainDataCopy,
+                }));
+              nock('http://127.0.0.1:8336')
+                .persist()
+                .post('/', (body) => body.method === 'getblockchaininfo')
+                .reply(200, JSON.stringify({
+                  id: 'nocktest',
+                  error: null,
+                  result: blockchainDataCopy,
                 }));
               pool.setupBlockPolling();
             });
