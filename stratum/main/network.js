@@ -4,7 +4,6 @@ const tls = require('tls');
 const fs = require('fs');
 const path = require('path');
 const events = require('events');
-const utils = require('./utils');
 const uuid = require('uuid');
 
 ////////////////////////////////////////////////////////////////////////////////
