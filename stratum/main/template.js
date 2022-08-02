@@ -17,7 +17,7 @@ const Template = function(jobId, config, rpcData, placeholder) {
   this.target = _this.rpcData.target ? BigInt(`0x${ _this.rpcData.target }`) : utils.bigIntFromBitsHex(_this.rpcData.bits);
   this.difficulty = parseFloat((Algorithms.sha256d.diff / Number(_this.target)).toFixed(9));
   this.previous = utils.reverseByteOrder(Buffer.from(_this.rpcData.previousblockhash, 'hex')).toString('hex');
-  this.generation = new Transactions(config).handleGeneration(rpcData, placeholder);
+  this.generation = new Transactions(config, rpcData).handleGeneration(placeholder);
   this.steps = utils.getMerkleSteps(_this.rpcData.transactions);
 
   // Manage Serializing Block Headers

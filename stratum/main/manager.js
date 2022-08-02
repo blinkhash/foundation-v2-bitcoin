@@ -24,6 +24,23 @@ const Manager = function(config, configMain) {
   this.extraNonce2Size = _this.extraNoncePlaceholder.length - _this.extraNonceCounter.size;
 
   // Check if New Block is Processed
+  this.handleUpdates = function(rpcData) {
+
+    // Build New Block Template
+    const tmpTemplate = new Template(
+      _this.jobCounter.next(),
+      _this.config,
+      Object.assign({}, rpcData),
+      _this.extraNoncePlaceholder);
+
+    // Update Current Template
+    _this.currentJob = tmpTemplate;
+    _this.emit('manager.block.updated', tmpTemplate);
+    _this.validJobs[tmpTemplate.jobId] = tmpTemplate;
+    return true;
+  };
+
+  // Check if New Block is Processed
   this.handleTemplate = function(rpcData, newBlock) {
 
     // If Current Job !== Previous Job
@@ -54,7 +71,7 @@ const Manager = function(config, configMain) {
   this.handleShare = function(jobId, client, submission) {
 
     // Main Submission Variables
-    const difficulty = client.difficulty;
+    let difficulty = client.difficulty;
     const submitTime = Date.now() / 1000 | 0;
     const job = _this.validJobs[jobId];
     const nTimeInt = parseInt(submission.nTime, 16);

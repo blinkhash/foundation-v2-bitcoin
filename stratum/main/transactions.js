@@ -3,10 +3,11 @@ const utils = require('./utils');
 ////////////////////////////////////////////////////////////////////////////////
 
 // Main Transactions Function
-const Transactions = function(config) {
+const Transactions = function(config, rpcData) {
 
   const _this = this;
   this.config = config;
+  this.rpcData = rpcData;
 
   // Mainnet Configuration
   this.configMainnet = {
@@ -37,7 +38,7 @@ const Transactions = function(config) {
   };
 
   // Calculate Generation Transaction
-  this.handleGeneration = function(rpcData, placeholder) {
+  this.handleGeneration = function(placeholder) {
 
     const txLockTime = 0;
     const txInSequence = 0;
@@ -51,33 +52,34 @@ const Transactions = function(config) {
       _this.configTestnet;
 
     // Use Version Found in CoinbaseTxn
-    if (rpcData.coinbasetxn && rpcData.coinbasetxn.data) {
-      txVersion = parseInt(utils.reverseHex(rpcData.coinbasetxn.data.slice(0, 8)), 16);
+    if (_this.rpcData.coinbasetxn && _this.rpcData.coinbasetxn.data) {
+      txVersion = parseInt(utils.reverseHex(_this.rpcData.coinbasetxn.data.slice(0, 8)), 16);
     }
 
     // Calculate Coin Block Reward
-    let reward = rpcData.coinbasevalue;
+    const fees = _this.rpcData.transactions.reduce((sum, tx) => sum + tx.fee, 0);
+    let reward = _this.rpcData.coinbasevalue + fees;
 
     // Handle Pool/Coinbase Addr/Flags
     const poolAddressScript = utils.addressToScript(_this.config.primary.address, network);
-    const coinbaseAux = rpcData.coinbaseaux && rpcData.coinbaseaux.flags ?
-      Buffer.from(rpcData.coinbaseaux.flags, 'hex') :
+    const coinbaseAux = _this.rpcData.coinbaseaux && _this.rpcData.coinbaseaux.flags ?
+      Buffer.from(_this.rpcData.coinbaseaux.flags, 'hex') :
       Buffer.from([]);
 
     // Build Initial ScriptSig
     let scriptSig = Buffer.concat([
-      utils.serializeNumber(rpcData.height),
+      utils.serializeNumber(_this.rpcData.height),
       coinbaseAux,
       utils.serializeNumber(Date.now() / 1000 | 0),
       Buffer.from([placeholder.length]),
     ]);
 
     // Add Auxiliary Data to ScriptSig
-    if (_this.config.auxiliary && _this.config.auxiliary.enabled && rpcData.auxData) {
+    if (_this.config.auxiliary && _this.config.auxiliary.enabled && _this.rpcData.auxData) {
       scriptSig = Buffer.concat([
         scriptSig,
         Buffer.from(_this.config.auxiliary.coin.header, 'hex'),
-        Buffer.from(rpcData.auxData.hash, 'hex'),
+        Buffer.from(_this.rpcData.auxData.hash, 'hex'),
         utils.packUInt32LE(1),
         utils.packUInt32LE(0)
       ]);
@@ -115,8 +117,8 @@ const Transactions = function(config) {
     ]));
 
     // Handle Witness Commitment
-    if (rpcData.default_witness_commitment !== undefined) {
-      const witness_commitment = Buffer.from(rpcData.default_witness_commitment, 'hex');
+    if (_this.rpcData.default_witness_commitment !== undefined) {
+      const witness_commitment = Buffer.from(_this.rpcData.default_witness_commitment, 'hex');
       txOutputBuffers.push(Buffer.concat([
         utils.packUInt64LE(0),
         utils.varIntBuffer(witness_commitment.length),

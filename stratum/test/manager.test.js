@@ -59,6 +59,12 @@ describe('Test manager functionality', () => {
     expect(manager.extraNonce2Size).toBe(4);
   });
 
+  test('Test template updates given updated blockTemplate', () => {
+    const manager = new Manager(configCopy, configMainCopy);
+    const response1 = manager.handleTemplate(rpcDataCopy);
+    expect(response1).toBe(true);
+  });
+
   test('Test template updates given new blockTemplate [1]', () => {
     const manager = new Manager(configCopy, configMainCopy);
     const response1 = manager.handleTemplate(rpcDataCopy, false);
