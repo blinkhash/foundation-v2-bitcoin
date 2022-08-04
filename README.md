@@ -8,7 +8,7 @@
 [![Known Vulnerabilities](https://snyk.io/test/npm/foundation-v2-bitcoin/badge.svg)](https://snyk.io/test/npm/foundation-v2-bitcoin)
 [![Discord](https://img.shields.io/discord/738590795384356904)](https://discord.gg/rNjez6VgNF)
 
-This portal is a high performance stratum server written entirely in Node.js. One instance of this software can startup and manage multiple coin pools, each with their own daemon and stratum ports. This server itself was built to be efficient, transparent, and easy to setup, while still maintaining greater scalability than many of the other open-source stratum servers. While this module will allow you to connect and mine directly on the a coin's blockchain, it doesn't include support for an API, payment processor, or share handler. For a complete server that includes these features and allows you to integrate multiple of these modules, see [here](https://github.com/blinkhash/foundation-v2-server).
+This portal is a high performance stratum server written entirely in Node.js. This server itself was built to be efficient, transparent, and easy to setup, while still maintaining greater scalability than many of the other open-source stratum servers. While this module will allow you to connect and mine directly on the a coin's blockchain, it doesn't include support for an API, payment processor, or share handler. For a complete server that includes these features and allows you to integrate multiple of these modules, see [here](https://github.com/blinkhash/foundation-v2-server).
 
 #### Need Support?
 
