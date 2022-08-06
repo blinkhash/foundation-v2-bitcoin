@@ -12,7 +12,7 @@ const Workers = function (logger) {
   this.stratum = null;
 
   // Build Promise from Input Configuration
-  this.createPromises = function() {
+  this.handlePromises = function() {
     return new Promise((resolve) => {
       const stratum = new Stratum(logger, _this.config, _this.configMain);
       stratum.setupStratum(() => resolve(stratum));
@@ -21,7 +21,7 @@ const Workers = function (logger) {
 
   // Start Worker Capabilities
   this.setupWorkers = function(callback) {
-    _this.createPromises(_this.config).then((stratum) => {
+    _this.handlePromises(_this.config).then((stratum) => {
       _this.stratum = stratum;
       callback();
     });
