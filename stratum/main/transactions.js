@@ -57,8 +57,7 @@ const Transactions = function(config, rpcData) {
     }
 
     // Calculate Coin Block Reward
-    const fees = _this.rpcData.transactions.reduce((sum, tx) => sum + tx.fee, 0);
-    let reward = _this.rpcData.coinbasevalue + fees;
+    let reward = rpcData.coinbasevalue;
 
     // Handle Pool/Coinbase Addr/Flags
     const poolAddressScript = utils.addressToScript(_this.config.primary.address, network);
