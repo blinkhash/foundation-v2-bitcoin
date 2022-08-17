@@ -96,12 +96,13 @@ const Pool = function(config, configMain, responseFn) {
   };
 
   // Check if Auxiliary Share is a Valid Block Candidate
-  this.checkAuxiliary = function(shareData) {
+  this.checkAuxiliary = function(shareData, auxShareData) {
     if (_this.auxiliary.enabled) {
       const shareMultiplier = Algorithms.sha256d.multiplier;
       const shareDiff = Algorithms.sha256d.diff / Number(_this.auxiliary.rpcData.target);
       shareData.blockDiffAuxiliary = shareDiff * shareMultiplier;
-      return _this.auxiliary.rpcData.target >= shareData.headerDiff;
+      auxShareData.blockDiffAuxiliary = shareDiff * shareMultiplier;
+      return _this.auxiliary.rpcData.target >= auxShareData.headerDiff;
     }
     return false;
   };
@@ -432,7 +433,7 @@ const Pool = function(config, configMain, responseFn) {
     _this.manager.on('manager.share', (shareData, auxShareData, blockValid) => {
 
       const shareValid = typeof shareData.error === 'undefined';
-      const auxBlockValid = _this.checkAuxiliary(auxShareData);
+      const auxBlockValid = _this.checkAuxiliary(shareData, auxShareData);
 
       // Process Auxiliary Submission
       if (!shareData.error && auxBlockValid) {
