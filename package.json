@@ -27,6 +27,10 @@
   },
   "scripts": {
     "start": "nodemon ./index.js",
+    "prod:start": "pm2 start ./index.js",
+    "prod:stop": "pm2 stop ./index.js",
+    "prod:logs": "pm2 logs main",
+    "prod:update": "pm2 update",
     "clean": "eslint . --ext .js --ignore-pattern node_modules/",
     "clean:fix": "eslint . --ext .js --fix --ignore-pattern node_modules/",
     "test": "jest --coverage",
@@ -49,7 +53,8 @@
     "merkle-lib": "^2.0.10",
     "nan": "^2.15.0",
     "node-gyp": "^9.0.0",
-    "nodemon": "^2.0.16",
+    "nodemon": "^2.0.19",
+    "pm2": "^5.2.0",
     "sha3": "2.1.4",
     "uuid": "^8.3.2"
   },
