@@ -232,8 +232,6 @@ const Pool = function(config, configMain, responseFn) {
         _this.emitLog('special', false, _this.text.stratumBlocksText7(_this.config.auxiliary.coin.name, _this.auxiliary.rpcData.height));
         _this.checkAccepted(_this.auxiliary.daemon, _this.auxiliary.rpcData.hash, (accepted, transaction) => {
           shareData.transaction = transaction;
-          shareData.height = _this.auxiliary.rpcData.height;
-          shareData.reward = _this.auxiliary.rpcData.coinbasevalue;
           callback(accepted, shareData);
         });
       }
@@ -434,6 +432,10 @@ const Pool = function(config, configMain, responseFn) {
 
       const shareValid = typeof shareData.error === 'undefined';
       const auxBlockValid = _this.checkAuxiliary(shareData, auxShareData);
+      if (_this.auxiliary.enabled && _this.auxiliary.rpcData && auxShareData) {
+        auxShareData.height = _this.auxiliary.rpcData.height;
+        auxShareData.reward = _this.auxiliary.rpcData.coinbasevalue;
+      }
 
       // Process Share/Primary Submission
       _this.handlePrimary(shareData, blockValid, (accepted, outputData) => {
