@@ -1180,9 +1180,9 @@ describe('Test pool functionality', () => {
         expect(response[0][0]).toBe('warning');
         expect(response[0][1]).toBe('Network difficulty (0) is lower than the difficulty on port 3002 (32)');
         expect(response[1][0]).toBe('log');
-        expect(response[1][1]).toBe('Requested template from primary chain (Bitcoin:1) via RPC polling');
+        expect(response[1][1]).toBe('Requested template from auxiliary chain (Namecoin:2) via RPC polling');
         expect(response[2][0]).toBe('log');
-        expect(response[2][1]).toBe('Requested template from auxiliary chain (Namecoin:2) via RPC polling');
+        expect(response[2][1]).toBe('Requested template from primary chain (Bitcoin:1) via RPC polling');
         done();
       }
     });
@@ -1310,9 +1310,9 @@ describe('Test pool functionality', () => {
         expect(response[0][0]).toBe('warning');
         expect(response[0][1]).toBe('Network difficulty (0) is lower than the difficulty on port 3002 (32)');
         expect(response[1][0]).toBe('log');
-        expect(response[1][1]).toBe('Requested template from primary chain (Bitcoin:1) via RPC polling');
+        expect(response[1][1]).toBe('Requested template from auxiliary chain (Namecoin:2) via RPC polling');
         expect(response[2][0]).toBe('log');
-        expect(response[2][1]).toBe('Requested template from auxiliary chain (Namecoin:2) via RPC polling');
+        expect(response[2][1]).toBe('Requested template from primary chain (Bitcoin:1) via RPC polling');
         done();
       }
     });

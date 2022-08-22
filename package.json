@@ -1,6 +1,6 @@
 {
   "name": "foundation-v2-bitcoin",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "A high performance Stratum pool-server written in Node.js",
   "main": "./exports.js",
   "keywords": [
