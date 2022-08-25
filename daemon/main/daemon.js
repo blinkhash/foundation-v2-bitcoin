@@ -17,8 +17,8 @@ const Daemon = function(daemons) {
   this.checkInstances = function(callback) {
     _this.interface = new Interface(daemons);
     _this.interface.once('online', () => callback(false, null));
-    _this.interface.on('failed', (errors) => callback(true, JSON.stringify(errors)));
-    _this.interface.checkInitialized(() => {});
+    _this.interface.on('failed', () => callback(true, null));
+    _this.interface.checkInitialized();
   };
 
   // Handle Sending RPC Commands

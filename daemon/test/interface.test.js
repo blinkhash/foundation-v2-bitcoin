@@ -49,10 +49,8 @@ describe('Test interface functionality', () => {
         instance: 'nocktest',
       }));
     const daemon = new Interface(daemonsCopy);
-    daemon.checkInitialized((response) => {
-      expect(response).toBe(true);
-      done();
-    });
+    daemon.on('online', () => done());
+    daemon.checkInitialized();
   });
 
   test('Test interface initialization [2]', (done) => {
@@ -71,18 +69,14 @@ describe('Test interface functionality', () => {
         instance: 'nocktest',
       }));
     const multiDaemon = new Interface(multiDaemonsCopy);
-    multiDaemon.checkInitialized((response) => {
-      expect(response).toBe(true);
-      done();
-    });
+    multiDaemon.on('online', () => done());
+    multiDaemon.checkInitialized();
   });
 
   test('Test interface initialization [3]', (done) => {
     const daemon = new Interface(daemonsCopy);
     daemon.on('failed', () => done());
-    daemon.checkInitialized((response) => {
-      expect(response).toBe(false);
-    });
+    daemon.checkInitialized();
   });
 
   test('Test interface commands [1]', (done) => {

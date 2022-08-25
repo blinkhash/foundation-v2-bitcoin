@@ -14,17 +14,16 @@ const Interface = function(daemons) {
   // Check if All Daemons are Online
   this.checkOnline = function(callback) {
     _this.sendCommands([['getpeerinfo', []]], false, (results) => {
-      const online = results.every((result) => !result.error);
-      if (!online) _this.emit('failed', results.filter((result) => result.error));
-      callback(online);
+      _this.instances = _this.instances.filter((instance, idx) => !results[idx].error);
+      callback(_this.instances.length);
     });
   };
 
   // Check if All Daemons are Initialized
-  this.checkInitialized = function(callback) {
-    _this.checkOnline((online) => {
-      if (online) _this.emit('online');
-      callback(online);
+  this.checkInitialized = function() {
+    _this.checkOnline((active) => {
+      if (active < 1) _this.emit('failed');
+      else _this.emit('online');
     });
   };
 
@@ -90,7 +89,6 @@ const Interface = function(daemons) {
       hostname: instance.host,
       port: instance.port,
       method: 'POST',
-      timeout: 3000,
       headers: { 'Content-Length': data.length },
       auth: instance.username + ':' + instance.password,
     };
@@ -106,6 +104,14 @@ const Interface = function(daemons) {
           callback(response);
         }
       }));
+    });
+
+    // HTTP Timeout Handling
+    req.on('socket', (socket) => {
+      socket.setTimeout(3000);
+      socket.on('timeout', () => {
+        req.abort();
+      });
     });
 
     // HTTP Error Handling

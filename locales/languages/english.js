@@ -15,8 +15,8 @@ exports.startingMessageText8 = (peers) => `Current peer count: ${ peers }`;
 exports.startingMessageText9 = () => 'Server initialized successfully ...';
 
 // Loader Text
-exports.loaderDaemonsText1 = () => 'There are no primary daemons configured, so the pool cannot be started. Check your configuration files';
-exports.loaderDaemonsText2 = () => 'There are no auxiliary daemons configured, so the pool cannot be started. Check your configuration files';
+exports.loaderDaemonsText1 = () => 'There are no primary daemons active, so the pool cannot be started. Check your configuration files';
+exports.loaderDaemonsText2 = () => 'There are no auxiliary daemons active, so the pool cannot be started. Check your configuration files';
 exports.loaderPortsText1 = (currentPort) => `Two or more ports are overlapping on ${ currentPort }. Check your configuration files`;
 exports.loaderRecipientsText1 = () => 'The recipient percentage is greater than 100%. Check your configuration files';
 exports.loaderRecipientsText2 = () => 'The recipient percentage is greater than 40%. Are you sure that you configured it properly?';

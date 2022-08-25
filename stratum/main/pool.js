@@ -201,15 +201,12 @@ const Pool = function(config, configMain, responseFn) {
 
     // Submit Block to Daemon
     _this.primary.daemon.sendCommands(commands, false, (results) => {
-      for (let i = 0; i < results.length; i += 1) {
-        const result = results[i];
-        if (result.error) {
-          callback(true, _this.text.stratumBlocksText2(result.instance.host, JSON.stringify(result.error)));
-          return;
-        } else if (result.response === 'rejected') {
-          callback(true, _this.text.stratumBlocksText3(result.instance.host));
-          return;
-        }
+      const rejected = results.filter((result) => result.response === 'rejected');
+      const accepted = results.filter((result) => !result.error && result.response !== 'rejected');
+      if (rejected.length >= 1) {
+        callback(true, _this.text.stratumBlocksText3(rejected[0].instance.host));
+      } else if (accepted.length < 1) {
+        callback(true, _this.text.stratumBlocksText2(results[0].instance.host, JSON.stringify(results[0].error)));
       }
       callback(false, null);
     });
@@ -310,15 +307,12 @@ const Pool = function(config, configMain, responseFn) {
 
     // Submit Block to Daemon
     _this.auxiliary.daemon.sendCommands(commands, false, (results) => {
-      for (let i = 0; i < results.length; i += 1) {
-        const result = results[i];
-        if (result.error) {
-          callback(true, _this.text.stratumBlocksText5(result.instance.host, JSON.stringify(result.error)));
-          return;
-        } else if (result.response === 'rejected') {
-          callback(true, _this.text.stratumBlocksText6(result.instance.host));
-          return;
-        }
+      const rejected = results.filter((result) => result.response === 'rejected');
+      const accepted = results.filter((result) => !result.error && result.response !== 'rejected');
+      if (rejected.length >= 1) {
+        callback(true, _this.text.stratumBlocksText6(rejected[0].instance.host));
+      } else if (accepted.length < 1) {
+        callback(true, _this.text.stratumBlocksText5(results[0].instance.host, JSON.stringify(results[0].error)));
       }
       callback(false, null);
     });
@@ -329,16 +323,21 @@ const Pool = function(config, configMain, responseFn) {
 
     // Load Daemons from Configuration
     const primaryDaemons = _this.config.primary.daemons;
-    const auxiliaryEnabled = _this.config.auxiliary && _this.config.auxiliary.enabled;
-    const auxiliaryDaemons = auxiliaryEnabled ? _this.config.auxiliary.daemons : [];
+    const auxiliaryDaemons = _this.auxiliary.enabled ? _this.config.auxiliary.daemons : [];
 
     // Build Daemon Instances
     _this.primary.daemon = new Daemon(primaryDaemons);
     _this.auxiliary.daemon = new Daemon(auxiliaryDaemons);
 
     // Initialize Daemons and Load Settings
-    _this.primary.daemon.checkInstances(() => {
-      _this.auxiliary.daemon.checkInstances(() => callback());
+    _this.primary.daemon.checkInstances((error) => {
+      if (error) _this.emitLog('error', false, _this.text.loaderDaemonsText1());
+      else if (_this.auxiliary.enabled) {
+        _this.auxiliary.daemon.checkInstances((error) => {
+          if (error) _this.emitLog('error', false, _this.text.loaderDaemonsText2());
+          else callback();
+        });
+      } else callback();
     });
   };
 
