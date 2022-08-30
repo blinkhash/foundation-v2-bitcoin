@@ -123,6 +123,19 @@ const Pool = function(config, configMain, responseFn) {
     });
   };
 
+  // Check Current Network Statistics
+  this.checkNetwork = function(daemon, type, callback) {
+    daemon.sendCommands([['getmininginfo', []]], true, (result) => {
+      const response = result.response || {};
+      callback({
+        difficulty: response.difficulty || 0,
+        hashrate: response.networkhashps || 0,
+        height: response.blocks || 0,
+        networkType: type,
+      });
+    });
+  };
+
   // Process Primary Block Candidate
   this.handlePrimary = function(shareData, blockValid, callback) {
 
@@ -459,11 +472,27 @@ const Pool = function(config, configMain, responseFn) {
 
     // Handle New Block Templates
     _this.manager.on('manager.block.new', (template) => {
+
+      // Process Primary Network Data
+      _this.checkNetwork(_this.primary.daemon, 'primary', (networkData) => {
+        _this.emit('pool.network', networkData);
+      });
+
+      // Process Auxiliary Network Data
+      if (_this.auxiliary.enabled) {
+        _this.checkNetwork(_this.auxiliary.daemon, 'auxiliary', (auxNetworkData) => {
+          _this.emit('pool.network', auxNetworkData);
+        });
+      }
+
+      // Broadcast New Mining Jobs to Clients
       if (_this.network) _this.network.broadcastMiningJobs(template, true);
     });
 
     // Handle Updated Block Templates
     _this.manager.on('manager.block.updated', (template) => {
+
+      // Broadcast New Mining Jobs to Clients
       if (_this.network) _this.network.broadcastMiningJobs(template, false);
     });
   };
