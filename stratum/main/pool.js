@@ -10,7 +10,7 @@ const utils = require('./utils');
 ////////////////////////////////////////////////////////////////////////////////
 
 // Main Pool Function
-const Pool = function(config, configMain, responseFn) {
+const Pool = function(config, configMain, callback) {
 
   const _this = this;
   this.config = config;
@@ -21,7 +21,7 @@ const Pool = function(config, configMain, responseFn) {
   this.difficulty = {};
   this.statistics = {};
   this.settings = {};
-  this.responseFn = responseFn;
+  this.callback = callback;
 
   // Pool Variables [2]
   this.primary = {};
@@ -33,7 +33,7 @@ const Pool = function(config, configMain, responseFn) {
   this.emitLog = function(level, limiting, text) {
     if (!limiting || !process.env.forkId || process.env.forkId === '0') {
       _this.emit('pool.log', level, text);
-      if (level === 'error') _this.responseFn(text);
+      if (level === 'error') _this.callback(text);
     }
   };
 
@@ -136,6 +136,46 @@ const Pool = function(config, configMain, responseFn) {
     });
   };
 
+  // Handle Validating Worker Shares
+  this.handleValidation = function(block, workers) {
+
+    // Specify Block Features
+    let totalWork = 0;
+    const transactionFee = _this.config.primary.payments.transactionFee;
+    const maxTime = Math.max(...workers.flatMap((worker) => worker.times));
+    const reward = block.reward - transactionFee;
+
+    // Calculate Worker Percentage
+    const validated = {};
+    workers.forEach((worker) => {
+
+      // Validate Shares for Workers w/ 51% Time
+      let shares = worker.work;
+      const timePeriod = utils.roundTo(worker.times / maxTime, 2);
+      if (timePeriod < 0.51) {
+        const lost = shares * (1 - timePeriod);
+        shares = utils.roundTo(Math.max(shares - lost, 0), 2);
+      }
+
+      // Add Validated Shares to Records
+      totalWork += shares;
+      if (worker.miner in validated) validated[worker.miner] += shares;
+      else validated[worker.miner] = shares;
+    });
+
+    // Determine Worker Rewards
+    const updates = {};
+    Object.keys(validated).forEach((address) => {
+      const percentage = validated[address] / totalWork;
+      const minerReward = utils.roundTo(reward * percentage, 8);
+      if (address in updates) updates[address] += minerReward;
+      else updates[address] = minerReward;
+    });
+
+    // Return Worker Rewards
+    return updates;
+  };
+
   // Process Primary Block Candidate
   this.handlePrimary = function(shareData, blockValid, callback) {
 
@@ -223,6 +263,114 @@ const Pool = function(config, configMain, responseFn) {
       }
       callback(false, null);
     });
+  };
+
+  // Process Worker Payments for Primary Blocks
+  this.handlePrimaryRounds = function(blocks, callback) {
+
+    // Get Hashes for Each Transaction
+    const commands = blocks.map((block) => ['gettransaction', [block.transaction]]);
+
+    // Derive Details for Every Transaction
+    _this.primary.daemon.sendCommands(commands, true, (result) => {
+      if (result.error) {
+        _this.emitLog('error', false, _this.text.stratumPaymentsText1(JSON.stringify(result.error)));
+        callback(result.error, null);
+        return;
+      }
+
+      // Handle Individual Transactions
+      if (!Array.isArray(result)) result = [result];
+      result.forEach((tx, idx) => {
+        const block = blocks[idx] || {};
+
+        // Check Daemon Edge Cases
+        if (tx.error && tx.error.code === -5) {
+          _this.emitLog('warning', false, _this.text.stratumPaymentsText2(block.transaction));
+          block.category = 'orphan';
+          return;
+        } else if (tx.error || !tx.response) {
+          _this.emitLog('error', false, _this.text.stratumPaymentsText3(block.transaction));
+          return;
+        } else if (!tx.response.details || (tx.response.details && tx.response.details.length === 0)) {
+          _this.emitLog('warning', false, _this.text.stratumPaymentsText4(block.transaction));
+          block.category = 'orphan';
+          return;
+        }
+
+        // Filter Transactions by Address
+        const transactions = tx.response.details.filter((tx) => {
+          let txAddress = tx.address;
+          if (txAddress.indexOf(':') > -1) txAddress = txAddress.split(':')[1];
+          return txAddress === _this.config.primary.address;
+        });
+
+        // Find Generation Transaction
+        let generationTx = null;
+        if (transactions.length >= 1) {
+          generationTx = transactions[0];
+        } else if (tx.response.details.length > 1){
+          generationTx = tx.response.details.sort((a, b) => a.vout - b.vout)[0];
+        } else if (tx.response.details.length === 1) {
+          generationTx = tx.response.details[0];
+        }
+
+        // Update Block Details
+        block.category = generationTx.category;
+        block.confirmations = parseInt(tx.response.confirmations);
+        if (['immature', 'generate'].includes(block.category)) {
+          block.reward = utils.roundTo(parseFloat(generationTx.amount), 8);
+        }
+      });
+
+      // Return Updated Block Data
+      callback(null, blocks);
+    });
+  };
+
+  // Process Upcoming Primary Payments
+  this.handlePrimaryWorkers = function(blocks, workers, callback) {
+
+    // Determine Block Handling Procedures
+    const updates = {};
+    blocks.forEach((block, idx) => {
+      const current = workers[idx] || [];
+      if (block.type !== 'primary') return;
+
+      // Establish Separate Behavior
+      let immature, generate;
+      switch (block.category) {
+
+      // Orphan Behavior
+      case 'orphan':
+        break;
+
+      // Immature Behavior
+      case 'immature':
+        immature = _this.handleValidation(block, current);
+        Object.keys(immature).forEach((address) => {
+          if (address in updates) updates[address].immature += immature[address];
+          else updates[address] = { immature: immature[address], generate: 0 };
+        });
+        break;
+
+      // Generate Behavior
+      case 'generate':
+        generate = _this.handleValidation(block, current);
+        Object.keys(generate).forEach((address) => {
+          if (address in updates) updates[address].generate += generate[address];
+          else updates[address] = { immature: 0, generate: generate[address] };
+        });
+        break;
+
+      // Default Behavior
+      default:
+        break;
+      }
+    });
+
+    // Return Updated Worker Data
+    callback(updates);
   };
 
   // Process Auxiliary Block Candidate
@@ -331,6 +479,107 @@ const Pool = function(config, configMain, responseFn) {
     });
   };
 
+  // Process Submitted Auxiliary Blocks
+  this.handleAuxiliaryRounds = function(blocks, callback) {
+
+    // Get Hashes for Each Transaction
+    const commands = blocks.map((block) => ['gettransaction', [block.transaction]]);
+
+    // Derive Details for Every Transaction
+    _this.auxiliary.daemon.sendCommands(commands, true, (result) => {
+      if (result.error) {
+        _this.emitLog('error', false, _this.text.stratumPaymentsText1(JSON.stringify(result.error)));
+        callback(result.error, null);
+        return;
+      }
+
+      // Handle Individual Transactions
+      if (!Array.isArray(result)) result = [result];
+      result.forEach((tx, idx) => {
+        const block = blocks[idx] || {};
+
+        // Check Daemon Edge Cases
+        if (tx.error && tx.error.code === -5) {
+          _this.emitLog('warning', false, _this.text.stratumPaymentsText2(block.transaction));
+          block.category = 'orphan';
+          return;
+        } else if (tx.error || !tx.response) {
+          _this.emitLog('error', false, _this.text.stratumPaymentsText3(block.transaction));
+          return;
+        } else if (!tx.response.details || (tx.response.details && tx.response.details.length === 0)) {
+          _this.emitLog('warning', false, _this.text.stratumPaymentsText4(block.transaction));
+          block.category = 'orphan';
+          return;
+        }
+
+        // Find Generation Transaction
+        let generationTx = null;
+        if (tx.response.details.length >= 1) {
+          generationTx = tx.response.details[0];
+        } else if (tx.response.details.length > 1){
+          generationTx = tx.response.details.sort((a, b) => a.vout - b.vout)[0];
+        } else if (tx.response.details.length === 1) {
+          generationTx = tx.response.details[0];
+        }
+
+        // Update Block Details
+        block.category = generationTx.category;
+        block.confirmations = parseInt(tx.response.confirmations);
+        if (['immature', 'generate'].includes(block.category)) {
+          block.reward = utils.roundTo(parseFloat(generationTx.amount), 8);
+        }
+      });
+
+      // Return Updated Block Data
+      callback(null, blocks);
+    });
+  };
+
+  // Process Upcoming Auxiliary Payments
+  this.handleAuxiliaryWorkers = function(blocks, workers, callback) {
+
+    // Determine Block Handling Procedures
+    const updates = {};
+    blocks.forEach((block, idx) => {
+      const current = workers[idx] || [];
+      if (block.type !== 'auxiliary') return;
+
+      // Establish Separate Behavior
+      let immature, generate;
+      switch (block.category) {
+
+      // Orphan Behavior
+      case 'orphan':
+        break;
+
+      // Immature Behavior
+      case 'immature':
+        immature = _this.handleValidation(block, current);
+        Object.keys(immature).forEach((address) => {
+          if (address in updates) updates[address].immature += immature[address];
+          else updates[address] = { immature: immature[address], generate: 0 };
+        });
+        break;
+
+      // Generate Behavior
+      case 'generate':
+        generate = _this.handleValidation(block, current);
+        Object.keys(generate).forEach((address) => {
+          if (address in updates) updates[address].generate += generate[address];
+          else updates[address] = { immature: 0, generate: generate[address] };
+        });
+        break;
+
+      // Default Behavior
+      default:
+        break;
+      }
+    });
+
+    // Return Updated Worker Data
+    callback(updates);
+  };
+  
   // Build Stratum Daemons
   this.setupDaemons = function(callback) {
 

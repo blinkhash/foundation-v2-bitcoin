@@ -170,3 +170,30 @@ exports.getPeerInfo = function() {
     }
   };
 };
+
+// Mock Daemon GetTransaction Data
+exports.getTransaction = function() {
+  return {
+    'amount': 0,
+    'confirmations': 39,
+    'generated': true,
+    'blockhash': '822f516a36e38a462c12dce195d2a47bb21ebec80df7730db534aad7862b831f',
+    'blockindex': 0,
+    'blocktime': 1662756646,
+    'txid': '209f1068e8a742bb54d6cbb15670f35901589169bb0fbf147bb148a9ac0c1b3d',
+    'walletconflicts': [],
+    'time': 1662756646,
+    'timereceived': 1662756678,
+    'bip125-replaceable': 'no',
+    'details': [
+      {
+        'involvesWatchonly': false,
+        'address': 'tltc1q55af62wuz6ng6q9p0s7k7sle4u23j393evy9mp',
+        'category': 'immature',
+        'amount': 10000,
+        'vout': 10000,
+      }
+    ],
+    'hex': '01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff06033d6b3d0101ffffffff010010a5d4e8000000232103729ae92c9d1b6f73bf9fbaf5571e028209f28c4d985fa2891d7bc1d865c3ee36ac00000000'
+  };
+};

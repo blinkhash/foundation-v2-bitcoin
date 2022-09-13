@@ -24,7 +24,6 @@ config.ports = [];
 const ports1 = {};
 ports1.port = 3002;
 ports1.enabled = true;
-ports1.type = 'shared';
 ports1.tls = false;
 ports1.difficulty = {};
 ports1.difficulty.initial = 32;
@@ -63,6 +62,11 @@ daemons1.port = 8332;
 daemons1.username = '';
 daemons1.password = '';
 config.primary.daemons.push(daemons1);
+
+// Payment Configuration
+// No Payments for Stratum Modules
+config.primary.payments = {};
+config.primary.payments.transactionFee = 0.004;
 
 // Recipients Configuration
 config.primary.recipients = [];

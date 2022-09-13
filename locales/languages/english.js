@@ -46,6 +46,10 @@ exports.stratumFirstJobText2 = (difficulty, port, initial) => `Network difficult
 exports.stratumManagerText1 = () => 'Block notification via RPC after primary block submission';
 exports.stratumManagerText2 = () => 'Block notification via RPC after auxiliary block submission';
 exports.stratumNetworkText1 = (time) => `No new blocks for ${ time } seconds. Updating transactions and rebroadcasting work`;
+exports.stratumPaymentsText1 = (error) => `RPC error when requesting transaction details from daemon: ${ error }`;
+exports.stratumPaymentsText2 = (transaction) => `The daemon reports that the transaction is invalid: ${ transaction }`;
+exports.stratumPaymentsText3 = (transaction) => `Unable to load transaction data from the daemon: ${ transaction }`;
+exports.stratumPaymentsText4 = (transaction) => `The daemon reports no details for the transaction: ${ transaction }`;
 exports.stratumPollingText1 = (coin, height) => `Requested template from primary chain (${ coin }:${ height }) via RPC polling`;
 exports.stratumPollingText2 = (coin, height) => `Requested template from auxiliary chain (${ coin }:${ height }) via RPC polling`;
 exports.stratumRecipientsText1 = () => 'No recipients have been added, which means that no fees will be taken';

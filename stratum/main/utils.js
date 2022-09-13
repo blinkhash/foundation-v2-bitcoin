@@ -433,6 +433,17 @@ exports.reverseHex = function(hex) {
   return exports.reverseBuffer(Buffer.from(hex, 'hex')).toString('hex');
 };
 
+// Round to # of Digits Given
+exports.roundTo = function(n, digits) {
+  if (!digits) {
+    digits = 0;
+  }
+  const multiplicator = Math.pow(10, digits);
+  n = parseFloat((n * multiplicator).toFixed(11));
+  const test = Math.round(n) / multiplicator;
+  return +(test.toFixed(digits));
+};
+
 // Serialize Height/Date Input
 /* istanbul ignore next */
 exports.serializeNumber = function(n) {

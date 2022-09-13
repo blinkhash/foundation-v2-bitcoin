@@ -139,7 +139,7 @@ function mockClient() {
 describe('Test pool functionality', () => {
 
   let configCopy, configMainCopy, rpcDataCopy, auxDataCopy;
-  let blockchainDataCopy, peerDataCopy;
+  let blockchainDataCopy, peerDataCopy, transactionDataCopy;
   beforeEach(() => {
     configCopy = JSON.parse(JSON.stringify(config));
     configMainCopy = JSON.parse(JSON.stringify(configMain));
@@ -147,6 +147,7 @@ describe('Test pool functionality', () => {
     auxDataCopy = JSON.parse(JSON.stringify(testdata.getAuxBlock()));
     blockchainDataCopy = JSON.parse(JSON.stringify(testdata.getBlockchainInfo()));
     peerDataCopy = JSON.parse(JSON.stringify(testdata.getPeerInfo()));
+    transactionDataCopy = JSON.parse(JSON.stringify(testdata.getTransaction()));
   });
 
   beforeEach(() => nock.cleanAll());
@@ -2236,6 +2237,1036 @@ describe('Test pool functionality', () => {
         expect(result).toStrictEqual({ 'error': null, 'authorized': false, 'disconnect': false });
         done();
       });
+    });
+  });
+
+  test('Test pool rounds handling [1]', (done) => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    mockSetupDaemons(pool, () => {
+      nock('http://127.0.0.1:8332')
+        .post('/', (body) => body.method === 'gettransaction')
+        .reply(200, JSON.stringify({
+          id: 'nocktest',
+          error: null,
+          result: transactionDataCopy,
+        }));
+      const blocks1 = { transaction: 'transaction1'};
+      const expected = {
+        transaction: 'transaction1',
+        category: 'immature',
+        confirmations: 39,
+        reward: 10000
+      };
+      pool.handlePrimaryRounds([blocks1], (error, result) => {
+        expect(result[0]).toStrictEqual(expected);
+        done();
+      });
+    });
+  });
+
+  test('Test pool rounds handling [2]', (done) => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    mockSetupDaemons(pool, () => {
+      nock('http://127.0.0.1:8332')
+        .post('/').reply(200, JSON.stringify([
+          { id: 'nocktest', error: null, result: transactionDataCopy },
+          { id: 'nocktest', error: null, result: transactionDataCopy },
+        ]));
+      const blocks1 = { transaction: 'transaction1'};
+      const blocks2 = { transaction: 'transaction2'};
+      const expected1 = {
+        transaction: 'transaction1',
+        category: 'immature',
+        confirmations: 39,
+        reward: 10000
+      };
+      const expected2 = {
+        transaction: 'transaction2',
+        category: 'immature',
+        confirmations: 39,
+        reward: 10000
+      };
+      pool.handlePrimaryRounds([blocks1, blocks2], (error, result) => {
+        expect(result[0]).toStrictEqual(expected1);
+        expect(result[1]).toStrictEqual(expected2);
+        done();
+      });
+    });
+  });
+
+  test('Test pool rounds handling [3]', (done) => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    mockSetupDaemons(pool, () => {
+      nock('http://127.0.0.1:8332')
+        .post('/').reply(200, JSON.stringify([
+          { id: 'nocktest', error: { code: -5 }, result: transactionDataCopy },
+          { id: 'nocktest', error: null, result: transactionDataCopy },
+        ]));
+      const blocks1 = { transaction: 'transaction1'};
+      const blocks2 = { transaction: 'transaction2'};
+      const expected1 = {
+        transaction: 'transaction1',
+        category: 'orphan'
+      };
+      const expected2 = {
+        transaction: 'transaction2',
+        category: 'immature',
+        confirmations: 39,
+        reward: 10000
+      };
+      pool.handlePrimaryRounds([blocks1, blocks2], (error, result) => {
+        expect(result[0]).toStrictEqual(expected1);
+        expect(result[1]).toStrictEqual(expected2);
+        done();
+      });
+    });
+  });
+
+  test('Test pool rounds handling [4]', (done) => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    mockSetupDaemons(pool, () => {
+      nock('http://127.0.0.1:8332')
+        .post('/').reply(200, JSON.stringify([
+          { id: 'nocktest', error: true, result: null },
+          { id: 'nocktest', error: null, result: transactionDataCopy },
+        ]));
+      const blocks1 = { transaction: 'transaction1'};
+      const blocks2 = { transaction: 'transaction2'};
+      const expected1 = {
+        transaction: 'transaction2',
+        category: 'immature',
+        confirmations: 39,
+        reward: 10000
+      };
+      pool.handlePrimaryRounds([blocks1, blocks2], (error, result) => {
+        expect(result[0]).toStrictEqual(blocks1);
+        expect(result[1]).toStrictEqual(expected1);
+        done();
+      });
+    });
+  });
+
+  test('Test pool rounds handling [5]', (done) => {
+    transactionDataCopy.details = null;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    mockSetupDaemons(pool, () => {
+      nock('http://127.0.0.1:8332')
+        .post('/').reply(200, JSON.stringify([
+          { id: 'nocktest', error: null, result: transactionDataCopy },
+          { id: 'nocktest', error: null, result: transactionDataCopy },
+        ]));
+      const blocks1 = { transaction: 'transaction1'};
+      const blocks2 = { transaction: 'transaction2'};
+      const expected1 = {
+        transaction: 'transaction1',
+        category: 'orphan'
+      };
+      const expected2 = {
+        transaction: 'transaction2',
+        category: 'orphan',
+      };
+      pool.handlePrimaryRounds([blocks1, blocks2], (error, result) => {
+        expect(result[0]).toStrictEqual(expected1);
+        expect(result[1]).toStrictEqual(expected2);
+        done();
+      });
+    });
+  });
+
+  test('Test pool rounds handling [6]', (done) => {
+    configCopy.auxiliary = auxiliaryConfig;
+    configCopy.auxiliary.daemons = auxiliaryDaemons;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    mockSetupDaemons(pool, () => {
+      nock('http://127.0.0.1:8336')
+        .post('/', (body) => body.method === 'gettransaction')
+        .reply(200, JSON.stringify({
+          id: 'nocktest',
+          error: null,
+          result: transactionDataCopy,
+        }));
+      const blocks1 = { transaction: 'transaction1'};
+      const expected = {
+        transaction: 'transaction1',
+        category: 'immature',
+        confirmations: 39,
+        reward: 10000
+      };
+      pool.handleAuxiliaryRounds([blocks1], (error, result) => {
+        expect(result[0]).toStrictEqual(expected);
+        done();
+      });
+    });
+  });
+
+  test('Test pool rounds handling [7]', (done) => {
+    configCopy.auxiliary = auxiliaryConfig;
+    configCopy.auxiliary.daemons = auxiliaryDaemons;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    mockSetupDaemons(pool, () => {
+      nock('http://127.0.0.1:8336')
+        .post('/').reply(200, JSON.stringify([
+          { id: 'nocktest', error: null, result: transactionDataCopy },
+          { id: 'nocktest', error: null, result: transactionDataCopy },
+        ]));
+      const blocks1 = { transaction: 'transaction1'};
+      const blocks2 = { transaction: 'transaction2'};
+      const expected1 = {
+        transaction: 'transaction1',
+        category: 'immature',
+        confirmations: 39,
+        reward: 10000
+      };
+      const expected2 = {
+        transaction: 'transaction2',
+        category: 'immature',
+        confirmations: 39,
+        reward: 10000
+      };
+      pool.handleAuxiliaryRounds([blocks1, blocks2], (error, result) => {
+        expect(result[0]).toStrictEqual(expected1);
+        expect(result[1]).toStrictEqual(expected2);
+        done();
+      });
+    });
+  });
+
+  test('Test pool rounds handling [8]', (done) => {
+    configCopy.auxiliary = auxiliaryConfig;
+    configCopy.auxiliary.daemons = auxiliaryDaemons;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    mockSetupDaemons(pool, () => {
+      nock('http://127.0.0.1:8336')
+        .post('/').reply(200, JSON.stringify([
+          { id: 'nocktest', error: { code: -5 }, result: transactionDataCopy },
+          { id: 'nocktest', error: null, result: transactionDataCopy },
+        ]));
+      const blocks1 = { transaction: 'transaction1'};
+      const blocks2 = { transaction: 'transaction2'};
+      const expected1 = {
+        transaction: 'transaction1',
+        category: 'orphan'
+      };
+      const expected2 = {
+        transaction: 'transaction2',
+        category: 'immature',
+        confirmations: 39,
+        reward: 10000
+      };
+      pool.handleAuxiliaryRounds([blocks1, blocks2], (error, result) => {
+        expect(result[0]).toStrictEqual(expected1);
+        expect(result[1]).toStrictEqual(expected2);
+        done();
+      });
+    });
+  });
+
+  test('Test pool rounds handling [9]', (done) => {
+    configCopy.auxiliary = auxiliaryConfig;
+    configCopy.auxiliary.daemons = auxiliaryDaemons;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    mockSetupDaemons(pool, () => {
+      nock('http://127.0.0.1:8336')
+        .post('/').reply(200, JSON.stringify([
+          { id: 'nocktest', error: true, result: null },
+          { id: 'nocktest', error: null, result: transactionDataCopy },
+        ]));
+      const blocks1 = { transaction: 'transaction1'};
+      const blocks2 = { transaction: 'transaction2'};
+      const expected1 = {
+        transaction: 'transaction2',
+        category: 'immature',
+        confirmations: 39,
+        reward: 10000
+      };
+      pool.handleAuxiliaryRounds([blocks1, blocks2], (error, result) => {
+        expect(result[0]).toStrictEqual(blocks1);
+        expect(result[1]).toStrictEqual(expected1);
+        done();
+      });
+    });
+  });
+
+  test('Test pool rounds handling [10]', (done) => {
+    configCopy.auxiliary = auxiliaryConfig;
+    configCopy.auxiliary.daemons = auxiliaryDaemons;
+    transactionDataCopy.details = null;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    mockSetupDaemons(pool, () => {
+      nock('http://127.0.0.1:8336')
+        .post('/').reply(200, JSON.stringify([
+          { id: 'nocktest', error: null, result: transactionDataCopy },
+          { id: 'nocktest', error: null, result: transactionDataCopy },
+        ]));
+      const blocks1 = { transaction: 'transaction1'};
+      const blocks2 = { transaction: 'transaction2'};
+      const expected1 = {
+        transaction: 'transaction1',
+        category: 'orphan'
+      };
+      const expected2 = {
+        transaction: 'transaction2',
+        category: 'orphan',
+      };
+      pool.handleAuxiliaryRounds([blocks1, blocks2], (error, result) => {
+        expect(result[0]).toStrictEqual(expected1);
+        expect(result[1]).toStrictEqual(expected2);
+        done();
+      });
+    });
+  });
+
+  test('Test pool workers handling [1]', () => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const blocks1 = {
+      id: '1',
+      timestamp: '1662753912672',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker1',
+      category: 'immature',
+      confirmations: 3,
+      difficulty: 15.999771117945784,
+      hash: '74b87851515089cc1ba89fa15c86f30c19e79a13f758aa05ee4b910a7158eb29',
+      height: 4025118,
+      identifier: 'master',
+      luck: 12.500178816662851,
+      reward: 10000,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      transaction: '01905e07123f9edb0439376639ad530207f9e313faee4708418a45bfc43e52be',
+      type: 'primary'
+    };
+    const worker1 = {
+      id: '2',
+      timestamp: '1662737864590',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker4',
+      identifier: 'master',
+      invalid: 0,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      stale: 0,
+      times: 276.95300000000003,
+      type: 'primary',
+      valid: 22,
+      work: 29.489361720000005
+    };
+    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'immature': 9999.996, 'generate': 0 }};
+    pool.handlePrimaryWorkers([blocks1], [[worker1]], (results) => {
+      expect(results).toStrictEqual(expected);
+    });
+  });
+
+  test('Test pool workers handling [2]', () => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const blocks1 = {
+      id: '1',
+      timestamp: '1662753912672',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker1',
+      category: 'immature',
+      confirmations: 3,
+      difficulty: 15.999771117945784,
+      hash: '74b87851515089cc1ba89fa15c86f30c19e79a13f758aa05ee4b910a7158eb29',
+      height: 4025118,
+      identifier: 'master',
+      luck: 12.500178816662851,
+      reward: 10000,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      transaction: '01905e07123f9edb0439376639ad530207f9e313faee4708418a45bfc43e52be',
+      type: 'primary'
+    };
+    const worker1 = {
+      id: '2',
+      timestamp: '1662737864590',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker4',
+      identifier: 'master',
+      invalid: 0,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      stale: 0,
+      times: 276.95300000000003,
+      type: 'primary',
+      valid: 22,
+      work: 29.489361720000005
+    };
+    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'generate': 0, 'immature': 19999.992 }};
+    pool.handlePrimaryWorkers([blocks1, blocks1], [[worker1], [worker1]], (results) => {
+      expect(results).toStrictEqual(expected);
+    });
+  });
+
+  test('Test pool workers handling [3]', () => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const blocks1 = {
+      id: '1',
+      timestamp: '1662753912672',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker1',
+      category: 'immature',
+      confirmations: 3,
+      difficulty: 15.999771117945784,
+      hash: '74b87851515089cc1ba89fa15c86f30c19e79a13f758aa05ee4b910a7158eb29',
+      height: 4025118,
+      identifier: 'master',
+      luck: 12.500178816662851,
+      reward: 10000,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      transaction: '01905e07123f9edb0439376639ad530207f9e313faee4708418a45bfc43e52be',
+      type: 'primary'
+    };
+    const worker1 = {
+      id: '2',
+      timestamp: '1662737864590',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker4',
+      identifier: 'master',
+      invalid: 0,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      stale: 0,
+      times: 276.95300000000003,
+      type: 'primary',
+      valid: 22,
+      work: 29.489361720000005
+    };
+    const worker2 = JSON.parse(JSON.stringify(worker1));
+    worker2.miner = 'na1CV4odThQ4mfzxQNhDbH4EN82bRukjq7';
+    worker2.worker = 'na1CV4odThQ4mfzxQNhDbH4EN82bRukjq7.worker4';
+    const expected = {
+      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'immature': 4999.998, 'generate': 0 },
+      'na1CV4odThQ4mfzxQNhDbH4EN82bRukjq7': { 'immature': 4999.998, 'generate': 0 }};
+    pool.handlePrimaryWorkers([blocks1], [[worker1, worker2]], (results) => {
+      expect(results).toStrictEqual(expected);
+    });
+  });
+
+  test('Test pool workers handling [4]', () => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const blocks1 = {
+      id: '1',
+      timestamp: '1662753912672',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker1',
+      category: 'immature',
+      confirmations: 3,
+      difficulty: 15.999771117945784,
+      hash: '74b87851515089cc1ba89fa15c86f30c19e79a13f758aa05ee4b910a7158eb29',
+      height: 4025118,
+      identifier: 'master',
+      luck: 12.500178816662851,
+      reward: 10000,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      transaction: '01905e07123f9edb0439376639ad530207f9e313faee4708418a45bfc43e52be',
+      type: 'primary'
+    };
+    const worker1 = {
+      id: '2',
+      timestamp: '1662737864590',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker4',
+      identifier: 'master',
+      invalid: 0,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      stale: 0,
+      times: 276.95300000000003,
+      type: 'primary',
+      valid: 22,
+      work: 29.489361720000005
+    };
+    const worker2 = JSON.parse(JSON.stringify(worker1));
+    worker2.miner = 'na1CV4odThQ4mfzxQNhDbH4EN82bRukjq7';
+    worker2.worker = 'na1CV4odThQ4mfzxQNhDbH4EN82bRukjq7.worker4';
+    worker2.times = 49.1;
+    const expected = {
+      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'immature': 8474.10655446, 'generate': 0 },
+      'na1CV4odThQ4mfzxQNhDbH4EN82bRukjq7': { 'immature': 1525.88944554, 'generate': 0 }};
+    pool.handlePrimaryWorkers([blocks1], [[worker1, worker2]], (results) => {
+      expect(results).toStrictEqual(expected);
+    });
+  });
+
+  test('Test pool workers handling [5]', () => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const blocks1 = {
+      id: '1',
+      timestamp: '1662753912672',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker1',
+      category: 'generate',
+      confirmations: 3,
+      difficulty: 15.999771117945784,
+      hash: '74b87851515089cc1ba89fa15c86f30c19e79a13f758aa05ee4b910a7158eb29',
+      height: 4025118,
+      identifier: 'master',
+      luck: 12.500178816662851,
+      reward: 10000,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      transaction: '01905e07123f9edb0439376639ad530207f9e313faee4708418a45bfc43e52be',
+      type: 'primary'
+    };
+    const worker1 = {
+      id: '2',
+      timestamp: '1662737864590',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker4',
+      identifier: 'master',
+      invalid: 0,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      stale: 0,
+      times: 276.95300000000003,
+      type: 'primary',
+      valid: 22,
+      work: 29.489361720000005
+    };
+    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'generate': 9999.996, 'immature': 0 }};
+    pool.handlePrimaryWorkers([blocks1], [[worker1]], (results) => {
+      expect(results).toStrictEqual(expected);
+    });
+  });
+
+  test('Test pool workers handling [6]', () => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const blocks1 = {
+      id: '1',
+      timestamp: '1662753912672',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker1',
+      category: 'generate',
+      confirmations: 3,
+      difficulty: 15.999771117945784,
+      hash: '74b87851515089cc1ba89fa15c86f30c19e79a13f758aa05ee4b910a7158eb29',
+      height: 4025118,
+      identifier: 'master',
+      luck: 12.500178816662851,
+      reward: 10000,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      transaction: '01905e07123f9edb0439376639ad530207f9e313faee4708418a45bfc43e52be',
+      type: 'primary'
+    };
+    const worker1 = {
+      id: '2',
+      timestamp: '1662737864590',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker4',
+      identifier: 'master',
+      invalid: 0,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      stale: 0,
+      times: 276.95300000000003,
+      type: 'primary',
+      valid: 22,
+      work: 29.489361720000005
+    };
+    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'immature': 0, 'generate': 19999.992 }};
+    pool.handlePrimaryWorkers([blocks1, blocks1], [[worker1], [worker1]], (results) => {
+      expect(results).toStrictEqual(expected);
+    });
+  });
+
+  test('Test pool workers handling [7]', () => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const blocks1 = {
+      id: '1',
+      timestamp: '1662753912672',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker1',
+      category: 'orphan',
+      confirmations: 3,
+      difficulty: 15.999771117945784,
+      hash: '74b87851515089cc1ba89fa15c86f30c19e79a13f758aa05ee4b910a7158eb29',
+      height: 4025118,
+      identifier: 'master',
+      luck: 12.500178816662851,
+      reward: 10000,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      transaction: '01905e07123f9edb0439376639ad530207f9e313faee4708418a45bfc43e52be',
+      type: 'primary'
+    };
+    const worker1 = {
+      id: '2',
+      timestamp: '1662737864590',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker4',
+      identifier: 'master',
+      invalid: 0,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      stale: 0,
+      times: 276.95300000000003,
+      type: 'primary',
+      valid: 22,
+      work: 29.489361720000005
+    };
+    pool.handlePrimaryWorkers([blocks1], [[worker1]], (results) => {
+      expect(results).toStrictEqual({});
+    });
+  });
+
+  test('Test pool workers handling [8]', () => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const blocks1 = {
+      id: '1',
+      timestamp: '1662753912672',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker1',
+      category: 'pending',
+      confirmations: 3,
+      difficulty: 15.999771117945784,
+      hash: '74b87851515089cc1ba89fa15c86f30c19e79a13f758aa05ee4b910a7158eb29',
+      height: 4025118,
+      identifier: 'master',
+      luck: 12.500178816662851,
+      reward: 10000,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      transaction: '01905e07123f9edb0439376639ad530207f9e313faee4708418a45bfc43e52be',
+      type: 'primary'
+    };
+    const worker1 = {
+      id: '2',
+      timestamp: '1662737864590',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker4',
+      identifier: 'master',
+      invalid: 0,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      stale: 0,
+      times: 276.95300000000003,
+      type: 'primary',
+      valid: 22,
+      work: 29.489361720000005
+    };
+    pool.handlePrimaryWorkers([blocks1], [[worker1]], (results) => {
+      expect(results).toStrictEqual({});
+    });
+  });
+
+  test('Test pool workers handling [9]', () => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const blocks1 = {
+      id: '1',
+      timestamp: '1662753912672',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker1',
+      category: 'immature',
+      confirmations: 3,
+      difficulty: 15.999771117945784,
+      hash: '74b87851515089cc1ba89fa15c86f30c19e79a13f758aa05ee4b910a7158eb29',
+      height: 4025118,
+      identifier: 'master',
+      luck: 12.500178816662851,
+      reward: 10000,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      transaction: '01905e07123f9edb0439376639ad530207f9e313faee4708418a45bfc43e52be',
+      type: 'auxiliary'
+    };
+    const worker1 = {
+      id: '2',
+      timestamp: '1662737864590',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker4',
+      identifier: 'master',
+      invalid: 0,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      stale: 0,
+      times: 276.95300000000003,
+      type: 'auxiliary',
+      valid: 22,
+      work: 29.489361720000005
+    };
+    pool.handlePrimaryWorkers([blocks1], [[worker1]], (results) => {
+      expect(results).toStrictEqual({});
+    });
+  });
+
+  test('Test pool workers handling [10]', () => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const blocks1 = {
+      id: '1',
+      timestamp: '1662753912672',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker1',
+      category: 'immature',
+      confirmations: 3,
+      difficulty: 15.999771117945784,
+      hash: '74b87851515089cc1ba89fa15c86f30c19e79a13f758aa05ee4b910a7158eb29',
+      height: 4025118,
+      identifier: 'master',
+      luck: 12.500178816662851,
+      reward: 10000,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      transaction: '01905e07123f9edb0439376639ad530207f9e313faee4708418a45bfc43e52be',
+      type: 'auxiliary'
+    };
+    const worker1 = {
+      id: '2',
+      timestamp: '1662737864590',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker4',
+      identifier: 'master',
+      invalid: 0,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      stale: 0,
+      times: 276.95300000000003,
+      type: 'auxiliary',
+      valid: 22,
+      work: 29.489361720000005
+    };
+    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'immature': 9999.996, 'generate': 0 }};
+    pool.handleAuxiliaryWorkers([blocks1], [[worker1]], (results) => {
+      expect(results).toStrictEqual(expected);
+    });
+  });
+
+  test('Test pool workers handling [11]', () => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const blocks1 = {
+      id: '1',
+      timestamp: '1662753912672',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker1',
+      category: 'immature',
+      confirmations: 3,
+      difficulty: 15.999771117945784,
+      hash: '74b87851515089cc1ba89fa15c86f30c19e79a13f758aa05ee4b910a7158eb29',
+      height: 4025118,
+      identifier: 'master',
+      luck: 12.500178816662851,
+      reward: 10000,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      transaction: '01905e07123f9edb0439376639ad530207f9e313faee4708418a45bfc43e52be',
+      type: 'auxiliary'
+    };
+    const worker1 = {
+      id: '2',
+      timestamp: '1662737864590',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker4',
+      identifier: 'master',
+      invalid: 0,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      stale: 0,
+      times: 276.95300000000003,
+      type: 'auxiliary',
+      valid: 22,
+      work: 29.489361720000005
+    };
+    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'generate': 0, 'immature': 19999.992 }};
+    pool.handleAuxiliaryWorkers([blocks1, blocks1], [[worker1], [worker1]], (results) => {
+      expect(results).toStrictEqual(expected);
+    });
+  });
+
+  test('Test pool workers handling [12]', () => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const blocks1 = {
+      id: '1',
+      timestamp: '1662753912672',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker1',
+      category: 'immature',
+      confirmations: 3,
+      difficulty: 15.999771117945784,
+      hash: '74b87851515089cc1ba89fa15c86f30c19e79a13f758aa05ee4b910a7158eb29',
+      height: 4025118,
+      identifier: 'master',
+      luck: 12.500178816662851,
+      reward: 10000,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      transaction: '01905e07123f9edb0439376639ad530207f9e313faee4708418a45bfc43e52be',
+      type: 'auxiliary'
+    };
+    const worker1 = {
+      id: '2',
+      timestamp: '1662737864590',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker4',
+      identifier: 'master',
+      invalid: 0,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      stale: 0,
+      times: 276.95300000000003,
+      type: 'auxiliary',
+      valid: 22,
+      work: 29.489361720000005
+    };
+    const worker2 = JSON.parse(JSON.stringify(worker1));
+    worker2.miner = 'na1CV4odThQ4mfzxQNhDbH4EN82bRukjq7';
+    worker2.worker = 'na1CV4odThQ4mfzxQNhDbH4EN82bRukjq7.worker4';
+    const expected = {
+      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'immature': 4999.998, 'generate': 0 },
+      'na1CV4odThQ4mfzxQNhDbH4EN82bRukjq7': { 'immature': 4999.998, 'generate': 0 }};
+    pool.handleAuxiliaryWorkers([blocks1], [[worker1, worker2]], (results) => {
+      expect(results).toStrictEqual(expected);
+    });
+  });
+
+  test('Test pool workers handling [13]', () => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const blocks1 = {
+      id: '1',
+      timestamp: '1662753912672',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker1',
+      category: 'immature',
+      confirmations: 3,
+      difficulty: 15.999771117945784,
+      hash: '74b87851515089cc1ba89fa15c86f30c19e79a13f758aa05ee4b910a7158eb29',
+      height: 4025118,
+      identifier: 'master',
+      luck: 12.500178816662851,
+      reward: 10000,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      transaction: '01905e07123f9edb0439376639ad530207f9e313faee4708418a45bfc43e52be',
+      type: 'auxiliary'
+    };
+    const worker1 = {
+      id: '2',
+      timestamp: '1662737864590',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker4',
+      identifier: 'master',
+      invalid: 0,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      stale: 0,
+      times: 276.95300000000003,
+      type: 'auxiliary',
+      valid: 22,
+      work: 29.489361720000005
+    };
+    const worker2 = JSON.parse(JSON.stringify(worker1));
+    worker2.miner = 'na1CV4odThQ4mfzxQNhDbH4EN82bRukjq7';
+    worker2.worker = 'na1CV4odThQ4mfzxQNhDbH4EN82bRukjq7.worker4';
+    worker2.times = 49.1;
+    const expected = {
+      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'immature': 8474.10655446, 'generate': 0 },
+      'na1CV4odThQ4mfzxQNhDbH4EN82bRukjq7': { 'immature': 1525.88944554, 'generate': 0 }};
+    pool.handleAuxiliaryWorkers([blocks1], [[worker1, worker2]], (results) => {
+      expect(results).toStrictEqual(expected);
+    });
+  });
+
+  test('Test pool workers handling [14]', () => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const blocks1 = {
+      id: '1',
+      timestamp: '1662753912672',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker1',
+      category: 'generate',
+      confirmations: 3,
+      difficulty: 15.999771117945784,
+      hash: '74b87851515089cc1ba89fa15c86f30c19e79a13f758aa05ee4b910a7158eb29',
+      height: 4025118,
+      identifier: 'master',
+      luck: 12.500178816662851,
+      reward: 10000,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      transaction: '01905e07123f9edb0439376639ad530207f9e313faee4708418a45bfc43e52be',
+      type: 'auxiliary'
+    };
+    const worker1 = {
+      id: '2',
+      timestamp: '1662737864590',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker4',
+      identifier: 'master',
+      invalid: 0,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      stale: 0,
+      times: 276.95300000000003,
+      type: 'auxiliary',
+      valid: 22,
+      work: 29.489361720000005
+    };
+    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'generate': 9999.996, 'immature': 0 }};
+    pool.handleAuxiliaryWorkers([blocks1], [[worker1]], (results) => {
+      expect(results).toStrictEqual(expected);
+    });
+  });
+
+  test('Test pool workers handling [15]', () => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const blocks1 = {
+      id: '1',
+      timestamp: '1662753912672',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker1',
+      category: 'generate',
+      confirmations: 3,
+      difficulty: 15.999771117945784,
+      hash: '74b87851515089cc1ba89fa15c86f30c19e79a13f758aa05ee4b910a7158eb29',
+      height: 4025118,
+      identifier: 'master',
+      luck: 12.500178816662851,
+      reward: 10000,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      transaction: '01905e07123f9edb0439376639ad530207f9e313faee4708418a45bfc43e52be',
+      type: 'auxiliary'
+    };
+    const worker1 = {
+      id: '2',
+      timestamp: '1662737864590',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker4',
+      identifier: 'master',
+      invalid: 0,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      stale: 0,
+      times: 276.95300000000003,
+      type: 'auxiliary',
+      valid: 22,
+      work: 29.489361720000005
+    };
+    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'immature': 0, 'generate': 19999.992 }};
+    pool.handleAuxiliaryWorkers([blocks1, blocks1], [[worker1], [worker1]], (results) => {
+      expect(results).toStrictEqual(expected);
+    });
+  });
+
+  test('Test pool workers handling [16]', () => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const blocks1 = {
+      id: '1',
+      timestamp: '1662753912672',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker1',
+      category: 'orphan',
+      confirmations: 3,
+      difficulty: 15.999771117945784,
+      hash: '74b87851515089cc1ba89fa15c86f30c19e79a13f758aa05ee4b910a7158eb29',
+      height: 4025118,
+      identifier: 'master',
+      luck: 12.500178816662851,
+      reward: 10000,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      transaction: '01905e07123f9edb0439376639ad530207f9e313faee4708418a45bfc43e52be',
+      type: 'auxiliary'
+    };
+    const worker1 = {
+      id: '2',
+      timestamp: '1662737864590',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker4',
+      identifier: 'master',
+      invalid: 0,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      stale: 0,
+      times: 276.95300000000003,
+      type: 'auxiliary',
+      valid: 22,
+      work: 29.489361720000005
+    };
+    pool.handleAuxiliaryWorkers([blocks1], [[worker1]], (results) => {
+      expect(results).toStrictEqual({});
+    });
+  });
+
+  test('Test pool workers handling [17]', () => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const blocks1 = {
+      id: '1',
+      timestamp: '1662753912672',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker1',
+      category: 'pending',
+      confirmations: 3,
+      difficulty: 15.999771117945784,
+      hash: '74b87851515089cc1ba89fa15c86f30c19e79a13f758aa05ee4b910a7158eb29',
+      height: 4025118,
+      identifier: 'master',
+      luck: 12.500178816662851,
+      reward: 10000,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      transaction: '01905e07123f9edb0439376639ad530207f9e313faee4708418a45bfc43e52be',
+      type: 'auxiliary'
+    };
+    const worker1 = {
+      id: '2',
+      timestamp: '1662737864590',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker4',
+      identifier: 'master',
+      invalid: 0,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      stale: 0,
+      times: 276.95300000000003,
+      type: 'auxiliary',
+      valid: 22,
+      work: 29.489361720000005
+    };
+    pool.handleAuxiliaryWorkers([blocks1], [[worker1]], (results) => {
+      expect(results).toStrictEqual({});
+    });
+  });
+
+  test('Test pool workers handling [18]', () => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const blocks1 = {
+      id: '1',
+      timestamp: '1662753912672',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker1',
+      category: 'immature',
+      confirmations: 3,
+      difficulty: 15.999771117945784,
+      hash: '74b87851515089cc1ba89fa15c86f30c19e79a13f758aa05ee4b910a7158eb29',
+      height: 4025118,
+      identifier: 'master',
+      luck: 12.500178816662851,
+      reward: 10000,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      transaction: '01905e07123f9edb0439376639ad530207f9e313faee4708418a45bfc43e52be',
+      type: 'primary'
+    };
+    const worker1 = {
+      id: '2',
+      timestamp: '1662737864590',
+      miner: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2',
+      worker: '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.worker4',
+      identifier: 'master',
+      invalid: 0,
+      round: '15c8343c-9751-4c67-aafa-29ff296da484',
+      solo: false,
+      stale: 0,
+      times: 276.95300000000003,
+      type: 'primary',
+      valid: 22,
+      work: 29.489361720000005
+    };
+    pool.handleAuxiliaryWorkers([blocks1], [[worker1]], (results) => {
+      expect(results).toStrictEqual({});
     });
   });
 });
