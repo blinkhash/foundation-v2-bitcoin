@@ -151,6 +151,7 @@ const Pool = function(config, configMain, callback) {
 
       // Validate Shares for Workers w/ 51% Time
       let shares = worker.work;
+      const identifier = `${ worker.miner }_${ worker.solo }_${ worker.type }`;
       const timePeriod = utils.roundTo(worker.times / maxTime, 2);
       if (timePeriod < 0.51) {
         const lost = shares * (1 - timePeriod);
@@ -159,17 +160,17 @@ const Pool = function(config, configMain, callback) {
 
       // Add Validated Shares to Records
       totalWork += shares;
-      if (worker.miner in validated) validated[worker.miner] += shares;
-      else validated[worker.miner] = shares;
+      if (identifier in validated) validated[identifier] += shares;
+      else validated[identifier] = shares;
     });
 
     // Determine Worker Rewards
     const updates = {};
-    Object.keys(validated).forEach((address) => {
-      const percentage = validated[address] / totalWork;
+    Object.keys(validated).forEach((identifier) => {
+      const percentage = validated[identifier] / totalWork;
       const minerReward = utils.roundTo(reward * percentage, 8);
-      if (address in updates) updates[address] += minerReward;
-      else updates[address] = minerReward;
+      if (identifier in updates) updates[identifier] += minerReward;
+      else updates[identifier] = minerReward;
     });
 
     // Return Worker Rewards
@@ -348,18 +349,18 @@ const Pool = function(config, configMain, callback) {
       // Immature Behavior
       case 'immature':
         immature = _this.handleValidation(block, current);
-        Object.keys(immature).forEach((address) => {
-          if (address in updates) updates[address].immature += immature[address];
-          else updates[address] = { immature: immature[address], generate: 0 };
+        Object.keys(immature).forEach((identifier) => {
+          if (identifier in updates) updates[identifier].immature += immature[identifier];
+          else updates[identifier] = { immature: immature[identifier], generate: 0 };
         });
         break;
 
       // Generate Behavior
       case 'generate':
         generate = _this.handleValidation(block, current);
-        Object.keys(generate).forEach((address) => {
-          if (address in updates) updates[address].generate += generate[address];
-          else updates[address] = { immature: 0, generate: generate[address] };
+        Object.keys(generate).forEach((identifier) => {
+          if (identifier in updates) updates[identifier].generate += generate[identifier];
+          else updates[identifier] = { immature: 0, generate: generate[identifier] };
         });
         break;
 
@@ -555,18 +556,18 @@ const Pool = function(config, configMain, callback) {
       // Immature Behavior
       case 'immature':
         immature = _this.handleValidation(block, current);
-        Object.keys(immature).forEach((address) => {
-          if (address in updates) updates[address].immature += immature[address];
-          else updates[address] = { immature: immature[address], generate: 0 };
+        Object.keys(immature).forEach((identifier) => {
+          if (identifier in updates) updates[identifier].immature += immature[identifier];
+          else updates[identifier] = { immature: immature[identifier], generate: 0 };
         });
         break;
 
       // Generate Behavior
       case 'generate':
         generate = _this.handleValidation(block, current);
-        Object.keys(generate).forEach((address) => {
-          if (address in updates) updates[address].generate += generate[address];
-          else updates[address] = { immature: 0, generate: generate[address] };
+        Object.keys(generate).forEach((identifier) => {
+          if (identifier in updates) updates[identifier].generate += generate[identifier];
+          else updates[identifier] = { immature: 0, generate: generate[identifier] };
         });
         break;
 
@@ -579,7 +580,7 @@ const Pool = function(config, configMain, callback) {
     // Return Updated Worker Data
     callback(updates);
   };
-  
+
   // Build Stratum Daemons
   this.setupDaemons = function(callback) {
 
