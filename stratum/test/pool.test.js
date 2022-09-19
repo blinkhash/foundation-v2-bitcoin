@@ -8,6 +8,21 @@ const testdata = require('../../daemon/test/daemon.mock');
 config.primary.address = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
 config.primary.recipients[0].address = '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2';
 
+// Primary Payments Configuration
+const primaryPaymentsConfig = {
+  'enabled': true,
+  'minConfirmations': 10,
+  'minPayment': 0.005,
+  'transactionFee': 0.004,
+  'daemon':{
+    'host': '127.0.0.2',
+    'port': 8332,
+    'username': 'foundation',
+    'password': 'foundation',
+  }
+};
+
+// Auxiliary Configuration
 const auxiliaryConfig = {
   'enabled': true,
   'coin': {
@@ -16,12 +31,27 @@ const auxiliaryConfig = {
   }
 };
 
+// Auxiliary Daemon Configuration
 const auxiliaryDaemons = [{
   'host': '127.0.0.1',
   'port': '8336',
   'username': 'foundation',
   'password': 'foundation'
 }];
+
+// Auxiliary Payments Configuration
+const auxiliaryPaymentsConfig = {
+  'enabled': true,
+  'minConfirmations': 10,
+  'minPayment': 0.005,
+  'transactionFee': 0.04,
+  'daemon':{
+    'host': '127.0.0.2',
+    'port': 8336,
+    'username': 'foundation',
+    'password': 'foundation',
+  }
+};
 
 nock.disableNetConnect();
 nock.enableNetConnect('127.0.0.1');
@@ -37,6 +67,13 @@ function mockSetupDaemons(pool, callback) {
       error: null,
       result: null,
     }));
+  nock('http://127.0.0.2:8332')
+    .post('/', (body) => body.method === 'getpeerinfo')
+    .reply(200, JSON.stringify({
+      id: 'nocktest',
+      error: null,
+      result: null,
+    }));
   nock('http://127.0.0.1:8336')
     .post('/', (body) => body.method === 'getpeerinfo')
     .reply(200, JSON.stringify({
@@ -44,7 +81,16 @@ function mockSetupDaemons(pool, callback) {
       error: null,
       result: null,
     }));
-  pool.setupDaemons(() => callback());
+  nock('http://127.0.0.2:8336')
+    .post('/', (body) => body.method === 'getpeerinfo')
+    .reply(200, JSON.stringify({
+      id: 'nocktest',
+      error: null,
+      result: null,
+    }));
+  pool.setupPrimaryDaemons(() => {
+    pool.setupAuxiliaryDaemons(() => callback());
+  });
 }
 
 function mockSetupSettings(pool, callback) {
@@ -140,6 +186,7 @@ describe('Test pool functionality', () => {
 
   let configCopy, configMainCopy, rpcDataCopy, auxDataCopy;
   let blockchainDataCopy, peerDataCopy, transactionDataCopy;
+  let unspentDataCopy;
   beforeEach(() => {
     configCopy = JSON.parse(JSON.stringify(config));
     configMainCopy = JSON.parse(JSON.stringify(configMain));
@@ -148,6 +195,7 @@ describe('Test pool functionality', () => {
     blockchainDataCopy = JSON.parse(JSON.stringify(testdata.getBlockchainInfo()));
     peerDataCopy = JSON.parse(JSON.stringify(testdata.getPeerInfo()));
     transactionDataCopy = JSON.parse(JSON.stringify(testdata.getTransaction()));
+    unspentDataCopy = JSON.parse(JSON.stringify(testdata.listUnspent()));
   });
 
   beforeEach(() => nock.cleanAll());
@@ -2374,6 +2422,25 @@ describe('Test pool functionality', () => {
   });
 
   test('Test pool rounds handling [6]', (done) => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    mockSetupDaemons(pool, () => {
+      nock('http://127.0.0.1:8332')
+        .post('/', (body) => body.method === 'gettransaction')
+        .reply(200, JSON.stringify({
+          id: 'nocktest',
+          error: true,
+          result: null,
+        }));
+      const blocks1 = { transaction: 'transaction1'};
+      pool.handlePrimaryRounds([blocks1], (error, result) => {
+        expect(error).toBe(true);
+        expect(result).toBe(null);
+        done();
+      });
+    });
+  });
+
+  test('Test pool rounds handling [7]', (done) => {
     configCopy.auxiliary = auxiliaryConfig;
     configCopy.auxiliary.daemons = auxiliaryDaemons;
     const pool = new Pool(configCopy, configMainCopy, () => {});
@@ -2399,7 +2466,7 @@ describe('Test pool functionality', () => {
     });
   });
 
-  test('Test pool rounds handling [7]', (done) => {
+  test('Test pool rounds handling [8]', (done) => {
     configCopy.auxiliary = auxiliaryConfig;
     configCopy.auxiliary.daemons = auxiliaryDaemons;
     const pool = new Pool(configCopy, configMainCopy, () => {});
@@ -2431,7 +2498,7 @@ describe('Test pool functionality', () => {
     });
   });
 
-  test('Test pool rounds handling [8]', (done) => {
+  test('Test pool rounds handling [9]', (done) => {
     configCopy.auxiliary = auxiliaryConfig;
     configCopy.auxiliary.daemons = auxiliaryDaemons;
     const pool = new Pool(configCopy, configMainCopy, () => {});
@@ -2461,7 +2528,7 @@ describe('Test pool functionality', () => {
     });
   });
 
-  test('Test pool rounds handling [9]', (done) => {
+  test('Test pool rounds handling [10]', (done) => {
     configCopy.auxiliary = auxiliaryConfig;
     configCopy.auxiliary.daemons = auxiliaryDaemons;
     const pool = new Pool(configCopy, configMainCopy, () => {});
@@ -2487,7 +2554,7 @@ describe('Test pool functionality', () => {
     });
   });
 
-  test('Test pool rounds handling [10]', (done) => {
+  test('Test pool rounds handling [11]', (done) => {
     configCopy.auxiliary = auxiliaryConfig;
     configCopy.auxiliary.daemons = auxiliaryDaemons;
     transactionDataCopy.details = null;
@@ -2511,6 +2578,27 @@ describe('Test pool functionality', () => {
       pool.handleAuxiliaryRounds([blocks1, blocks2], (error, result) => {
         expect(result[0]).toStrictEqual(expected1);
         expect(result[1]).toStrictEqual(expected2);
+        done();
+      });
+    });
+  });
+
+  test('Test pool rounds handling [12]', (done) => {
+    configCopy.auxiliary = auxiliaryConfig;
+    configCopy.auxiliary.daemons = auxiliaryDaemons;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    mockSetupDaemons(pool, () => {
+      nock('http://127.0.0.1:8336')
+        .post('/', (body) => body.method === 'gettransaction')
+        .reply(200, JSON.stringify({
+          id: 'nocktest',
+          error: true,
+          result: null,
+        }));
+      const blocks1 = { transaction: 'transaction1'};
+      pool.handleAuxiliaryRounds([blocks1], (error, result) => {
+        expect(error).toBe(true);
+        expect(result).toBe(null);
         done();
       });
     });
@@ -2551,7 +2639,7 @@ describe('Test pool functionality', () => {
       valid: 22,
       work: 29.489361720000005
     };
-    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2_false_primary': { 'immature': 9999.996, 'generate': 0 }};
+    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'immature': 10000, 'generate': 0 }};
     pool.handlePrimaryWorkers([blocks1], [[worker1]], (results) => {
       expect(results).toStrictEqual(expected);
     });
@@ -2592,7 +2680,7 @@ describe('Test pool functionality', () => {
       valid: 22,
       work: 29.489361720000005
     };
-    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2_false_primary': { 'generate': 0, 'immature': 19999.992 }};
+    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'generate': 0, 'immature': 20000 }};
     pool.handlePrimaryWorkers([blocks1, blocks1], [[worker1], [worker1]], (results) => {
       expect(results).toStrictEqual(expected);
     });
@@ -2637,8 +2725,8 @@ describe('Test pool functionality', () => {
     worker2.miner = '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN3';
     worker2.worker = '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN3.worker4';
     const expected = {
-      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2_false_primary': { 'immature': 4999.998, 'generate': 0 },
-      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN3_false_primary': { 'immature': 4999.998, 'generate': 0 }};
+      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'immature': 5000, 'generate': 0 },
+      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN3': { 'immature': 5000, 'generate': 0 }};
     pool.handlePrimaryWorkers([blocks1], [[worker1, worker2]], (results) => {
       expect(results).toStrictEqual(expected);
     });
@@ -2684,8 +2772,8 @@ describe('Test pool functionality', () => {
     worker2.worker = '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN3.worker4';
     worker2.times = 49.1;
     const expected = {
-      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2_false_primary': { 'immature': 8474.10655446, 'generate': 0 },
-      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN3_false_primary': { 'immature': 1525.88944554, 'generate': 0 }};
+      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'immature': 8474.10994411, 'generate': 0 },
+      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN3': { 'immature': 1525.89005589, 'generate': 0 }};
     pool.handlePrimaryWorkers([blocks1], [[worker1, worker2]], (results) => {
       expect(results).toStrictEqual(expected);
     });
@@ -2726,7 +2814,7 @@ describe('Test pool functionality', () => {
       valid: 22,
       work: 29.489361720000005
     };
-    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2_false_primary': { 'generate': 9999.996, 'immature': 0 }};
+    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'generate': 10000, 'immature': 0 }};
     pool.handlePrimaryWorkers([blocks1], [[worker1]], (results) => {
       expect(results).toStrictEqual(expected);
     });
@@ -2767,7 +2855,7 @@ describe('Test pool functionality', () => {
       valid: 22,
       work: 29.489361720000005
     };
-    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2_false_primary': { 'immature': 0, 'generate': 19999.992 }};
+    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'immature': 0, 'generate': 20000 }};
     pool.handlePrimaryWorkers([blocks1, blocks1], [[worker1], [worker1]], (results) => {
       expect(results).toStrictEqual(expected);
     });
@@ -2928,7 +3016,7 @@ describe('Test pool functionality', () => {
       valid: 22,
       work: 29.489361720000005
     };
-    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2_false_auxiliary': { 'immature': 9999.996, 'generate': 0 }};
+    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'immature': 10000, 'generate': 0 }};
     pool.handleAuxiliaryWorkers([blocks1], [[worker1]], (results) => {
       expect(results).toStrictEqual(expected);
     });
@@ -2969,7 +3057,7 @@ describe('Test pool functionality', () => {
       valid: 22,
       work: 29.489361720000005
     };
-    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2_false_auxiliary': { 'generate': 0, 'immature': 19999.992 }};
+    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'generate': 0, 'immature': 20000 }};
     pool.handleAuxiliaryWorkers([blocks1, blocks1], [[worker1], [worker1]], (results) => {
       expect(results).toStrictEqual(expected);
     });
@@ -3014,8 +3102,8 @@ describe('Test pool functionality', () => {
     worker2.miner = '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN3';
     worker2.worker = '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN3.worker4';
     const expected = {
-      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2_false_auxiliary': { 'immature': 4999.998, 'generate': 0 },
-      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN3_false_auxiliary': { 'immature': 4999.998, 'generate': 0 }};
+      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'immature': 5000, 'generate': 0 },
+      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN3': { 'immature': 5000, 'generate': 0 }};
     pool.handleAuxiliaryWorkers([blocks1], [[worker1, worker2]], (results) => {
       expect(results).toStrictEqual(expected);
     });
@@ -3061,8 +3149,8 @@ describe('Test pool functionality', () => {
     worker2.worker = '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN3.worker4';
     worker2.times = 49.1;
     const expected = {
-      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2_false_auxiliary': { 'immature': 8474.10655446, 'generate': 0 },
-      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN3_false_auxiliary': { 'immature': 1525.88944554, 'generate': 0 }};
+      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'immature': 8474.10994411, 'generate': 0 },
+      '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN3': { 'immature': 1525.89005589, 'generate': 0 }};
     pool.handleAuxiliaryWorkers([blocks1], [[worker1, worker2]], (results) => {
       expect(results).toStrictEqual(expected);
     });
@@ -3103,7 +3191,7 @@ describe('Test pool functionality', () => {
       valid: 22,
       work: 29.489361720000005
     };
-    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2_false_auxiliary': { 'generate': 9999.996, 'immature': 0 }};
+    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'generate': 10000, 'immature': 0 }};
     pool.handleAuxiliaryWorkers([blocks1], [[worker1]], (results) => {
       expect(results).toStrictEqual(expected);
     });
@@ -3144,7 +3232,7 @@ describe('Test pool functionality', () => {
       valid: 22,
       work: 29.489361720000005
     };
-    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2_false_auxiliary': { 'immature': 0, 'generate': 19999.992 }};
+    const expected = { '1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2': { 'immature': 0, 'generate': 20000 }};
     pool.handleAuxiliaryWorkers([blocks1, blocks1], [[worker1], [worker1]], (results) => {
       expect(results).toStrictEqual(expected);
     });
@@ -3267,6 +3355,436 @@ describe('Test pool functionality', () => {
     };
     pool.handleAuxiliaryWorkers([blocks1], [[worker1]], (results) => {
       expect(results).toStrictEqual({});
+    });
+  });
+
+  test('Test pool balance handling [1]', (done) => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    pool.handlePrimaryBalances({}, (error, result) => {
+      expect(error).toBe(null);
+      expect(result).toBe(0);
+      done();
+    });
+  });
+
+  test('Test pool balance handling [2]', (done) => {
+    configCopy.primary.payments = primaryPaymentsConfig;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const payments = { 'address1': 5000 };
+    nock('http://127.0.0.2:8332')
+      .post('/', (body) => body.method === 'listunspent')
+      .reply(200, JSON.stringify({
+        id: 'nocktest',
+        error: null,
+        result: unspentDataCopy,
+      }));
+    mockSetupDaemons(pool, () => {
+      pool.handlePrimaryBalances(payments, (error, result) => {
+        expect(error).toBe('bad-insufficient-funds');
+        expect(result).toBe(null);
+        done();
+      });
+    });
+  });
+
+  test('Test pool balance handling [3]', (done) => {
+    configCopy.primary.payments = primaryPaymentsConfig;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const payments = { 'address1': 10 };
+    nock('http://127.0.0.2:8332')
+      .post('/', (body) => body.method === 'listunspent')
+      .reply(200, JSON.stringify({
+        id: 'nocktest',
+        error: null,
+        result: unspentDataCopy,
+      }));
+    mockSetupDaemons(pool, () => {
+      pool.handlePrimaryBalances(payments, (error, result) => {
+        expect(error).toBe(null);
+        expect(result).toBe(12.5);
+        done();
+      });
+    });
+  });
+
+  test('Test pool balance handling [4]', (done) => {
+    configCopy.primary.payments = primaryPaymentsConfig;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const payments = { 'address1': 5 };
+    nock('http://127.0.0.2:8332')
+      .post('/', (body) => body.method === 'listunspent')
+      .reply(200, JSON.stringify({
+        id: 'nocktest',
+        error: null,
+        result: [],
+      }));
+    mockSetupDaemons(pool, () => {
+      pool.handlePrimaryBalances(payments, (error, result) => {
+        expect(error).toBe('bad-insufficient-funds');
+        expect(result).toBe(null);
+        done();
+      });
+    });
+  });
+
+  test('Test pool balance handling [5]', (done) => {
+    configCopy.primary.payments = primaryPaymentsConfig;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const payments = { 'address1': 5 };
+    nock('http://127.0.0.2:8332')
+      .post('/', (body) => body.method === 'listunspent')
+      .reply(200, JSON.stringify({
+        id: 'nocktest',
+        error: null,
+        result: [{ amount: 1000 }],
+      }));
+    mockSetupDaemons(pool, () => {
+      pool.handlePrimaryBalances(payments, (error, result) => {
+        expect(error).toBe('bad-insufficient-funds');
+        expect(result).toBe(null);
+        done();
+      });
+    });
+  });
+
+  test('Test pool balance handling [6]', (done) => {
+    configCopy.primary.payments = primaryPaymentsConfig;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const payments = { 'address1': 5000 };
+    nock('http://127.0.0.2:8332')
+      .post('/', (body) => body.method === 'listunspent')
+      .reply(200, JSON.stringify({
+        id: 'nocktest',
+        error: true,
+        result: null,
+      }));
+    mockSetupDaemons(pool, () => {
+      pool.handlePrimaryBalances(payments, (error, result) => {
+        expect(error).toBe(true);
+        expect(result).toBe(null);
+        done();
+      });
+    });
+  });
+
+  test('Test pool balance handling [7]', (done) => {
+    configCopy.auxiliary = auxiliaryConfig;
+    configCopy.auxiliary.daemons = auxiliaryDaemons;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    pool.handleAuxiliaryBalances({}, (error, result) => {
+      expect(error).toBe(null);
+      expect(result).toBe(0);
+      done();
+    });
+  });
+
+  test('Test pool balance handling [8]', (done) => {
+    configCopy.auxiliary = auxiliaryConfig;
+    configCopy.auxiliary.daemons = auxiliaryDaemons;
+    configCopy.auxiliary.payments = auxiliaryPaymentsConfig;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const payments = { 'address1': 5000 };
+    nock('http://127.0.0.2:8336')
+      .post('/', (body) => body.method === 'listunspent')
+      .reply(200, JSON.stringify({
+        id: 'nocktest',
+        error: null,
+        result: unspentDataCopy,
+      }));
+    mockSetupDaemons(pool, () => {
+      pool.handleAuxiliaryBalances(payments, (error, result) => {
+        expect(error).toBe('bad-insufficient-funds');
+        expect(result).toBe(null);
+        done();
+      });
+    });
+  });
+
+  test('Test pool balance handling [9]', (done) => {
+    configCopy.auxiliary = auxiliaryConfig;
+    configCopy.auxiliary.daemons = auxiliaryDaemons;
+    configCopy.auxiliary.payments = auxiliaryPaymentsConfig;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const payments = { 'address1': 10 };
+    nock('http://127.0.0.2:8336')
+      .post('/', (body) => body.method === 'listunspent')
+      .reply(200, JSON.stringify({
+        id: 'nocktest',
+        error: null,
+        result: unspentDataCopy,
+      }));
+    mockSetupDaemons(pool, () => {
+      pool.handleAuxiliaryBalances(payments, (error, result) => {
+        expect(error).toBe(null);
+        expect(result).toBe(12.5);
+        done();
+      });
+    });
+  });
+
+  test('Test pool balance handling [10]', (done) => {
+    configCopy.auxiliary = auxiliaryConfig;
+    configCopy.auxiliary.daemons = auxiliaryDaemons;
+    configCopy.auxiliary.payments = auxiliaryPaymentsConfig;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const payments = { 'address1': 5 };
+    nock('http://127.0.0.2:8336')
+      .post('/', (body) => body.method === 'listunspent')
+      .reply(200, JSON.stringify({
+        id: 'nocktest',
+        error: null,
+        result: [],
+      }));
+    mockSetupDaemons(pool, () => {
+      pool.handleAuxiliaryBalances(payments, (error, result) => {
+        expect(error).toBe('bad-insufficient-funds');
+        expect(result).toBe(null);
+        done();
+      });
+    });
+  });
+
+  test('Test pool balance handling [11]', (done) => {
+    configCopy.auxiliary = auxiliaryConfig;
+    configCopy.auxiliary.daemons = auxiliaryDaemons;
+    configCopy.auxiliary.payments = auxiliaryPaymentsConfig;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const payments = { 'address1': 5 };
+    nock('http://127.0.0.2:8336')
+      .post('/', (body) => body.method === 'listunspent')
+      .reply(200, JSON.stringify({
+        id: 'nocktest',
+        error: null,
+        result: [{ amount: 1000 }],
+      }));
+    mockSetupDaemons(pool, () => {
+      pool.handleAuxiliaryBalances(payments, (error, result) => {
+        expect(error).toBe('bad-insufficient-funds');
+        expect(result).toBe(null);
+        done();
+      });
+    });
+  });
+
+  test('Test pool balance handling [12]', (done) => {
+    configCopy.auxiliary = auxiliaryConfig;
+    configCopy.auxiliary.daemons = auxiliaryDaemons;
+    configCopy.auxiliary.payments = auxiliaryPaymentsConfig;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const payments = { 'address1': 5000 };
+    nock('http://127.0.0.2:8336')
+      .post('/', (body) => body.method === 'listunspent')
+      .reply(200, JSON.stringify({
+        id: 'nocktest',
+        error: true,
+        result: null,
+      }));
+    mockSetupDaemons(pool, () => {
+      pool.handleAuxiliaryBalances(payments, (error, result) => {
+        expect(error).toBe(true);
+        expect(result).toBe(null);
+        done();
+      });
+    });
+  });
+
+  test('Test pool payments handling [1]', (done) => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    pool.handlePrimaryPayments({}, (error, amounts, balances, transaction) => {
+      expect(error).toBe(null);
+      expect(amounts).toStrictEqual({});
+      expect(balances).toStrictEqual({});
+      expect(transaction).toBe(null);
+      done();
+    });
+  });
+
+  test('Test pool payments handling [2]', (done) => {
+    configCopy.primary.payments = primaryPaymentsConfig;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const payments = { 'address1': 5000 };
+    nock('http://127.0.0.2:8332')
+      .post('/', (body) => body.method === 'sendmany')
+      .reply(200, JSON.stringify({
+        id: 'nocktest',
+        error: null,
+        result: 'transaction1',
+      }));
+    const expectedAmounts = { 'address1': 5000 };
+    mockSetupDaemons(pool, () => {
+      pool.handlePrimaryPayments(payments, (error, amounts, balances, transaction) => {
+        expect(error).toBe(null);
+        expect(amounts).toStrictEqual(expectedAmounts);
+        expect(balances).toStrictEqual({});
+        expect(transaction).toBe('transaction1');
+        done();
+      });
+    });
+  });
+
+  test('Test pool payments handling [3]', (done) => {
+    const primaryPaymentsConfigCopy = Object.assign({}, primaryPaymentsConfig);
+    primaryPaymentsConfigCopy.minPayment = 10000000;
+    configCopy.primary.payments = primaryPaymentsConfigCopy;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const payments = { 'address1': 5000 };
+    const expectedBalances = { 'address1': 5000 };
+    mockSetupDaemons(pool, () => {
+      pool.handlePrimaryPayments(payments, (error, amounts, balances, transaction) => {
+        expect(error).toBe(null);
+        expect(amounts).toStrictEqual({});
+        expect(balances).toStrictEqual(expectedBalances);
+        expect(transaction).toBe(null);
+        done();
+      });
+    });
+  });
+
+  test('Test pool payments handling [4]', (done) => {
+    configCopy.primary.payments = primaryPaymentsConfig;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const payments = { 'address1': 5000 };
+    nock('http://127.0.0.2:8332')
+      .post('/', (body) => body.method === 'sendmany')
+      .reply(200, JSON.stringify({
+        id: 'nocktest',
+        error: true,
+        result: null,
+      }));
+    mockSetupDaemons(pool, () => {
+      pool.handlePrimaryPayments(payments, (error, amounts, balances, transaction) => {
+        expect(error).toBe(true);
+        expect(amounts).toStrictEqual({});
+        expect(balances).toStrictEqual({});
+        expect(transaction).toBe(null);
+        done();
+      });
+    });
+  });
+
+  test('Test pool payments handling [5]', (done) => {
+    configCopy.primary.payments = primaryPaymentsConfig;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const payments = { 'address1': 5000 };
+    nock('http://127.0.0.2:8332')
+      .post('/', (body) => body.method === 'sendmany')
+      .reply(200, JSON.stringify({
+        id: 'nocktest',
+        error: null,
+        result: null,
+      }));
+    mockSetupDaemons(pool, () => {
+      pool.handlePrimaryPayments(payments, (error, amounts, balances, transaction) => {
+        expect(error).toBe('bad-transaction-undefined');
+        expect(amounts).toStrictEqual({});
+        expect(balances).toStrictEqual({});
+        expect(transaction).toBe(null);
+        done();
+      });
+    });
+  });
+
+  test('Test pool payments handling [6]', (done) => {
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    pool.handleAuxiliaryPayments({}, (error, amounts, balances, transaction) => {
+      expect(error).toBe(null);
+      expect(amounts).toStrictEqual({});
+      expect(balances).toStrictEqual({});
+      expect(transaction).toBe(null);
+      done();
+    });
+  });
+
+  test('Test pool payments handling [7]', (done) => {
+    configCopy.auxiliary = auxiliaryConfig;
+    configCopy.auxiliary.daemons = auxiliaryDaemons;
+    configCopy.auxiliary.payments = auxiliaryPaymentsConfig;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const payments = { 'address1': 5000 };
+    nock('http://127.0.0.2:8336')
+      .post('/', (body) => body.method === 'sendmany')
+      .reply(200, JSON.stringify({
+        id: 'nocktest',
+        error: null,
+        result: 'transaction1',
+      }));
+    const expectedAmounts = { 'address1': 5000 };
+    mockSetupDaemons(pool, () => {
+      pool.handleAuxiliaryPayments(payments, (error, amounts, balances, transaction) => {
+        expect(error).toBe(null);
+        expect(amounts).toStrictEqual(expectedAmounts);
+        expect(balances).toStrictEqual({});
+        expect(transaction).toBe('transaction1');
+        done();
+      });
+    });
+  });
+
+  test('Test pool payments handling [8]', (done) => {
+    const auxiliaryPaymentsConfigCopy = Object.assign({}, auxiliaryPaymentsConfig);
+    auxiliaryPaymentsConfigCopy.minPayment = 10000000;
+    configCopy.auxiliary = auxiliaryConfig;
+    configCopy.auxiliary.daemons = auxiliaryDaemons;
+    configCopy.auxiliary.payments = auxiliaryPaymentsConfigCopy;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const payments = { 'address1': 5000 };
+    const expectedBalances = { 'address1': 5000 };
+    mockSetupDaemons(pool, () => {
+      pool.handleAuxiliaryPayments(payments, (error, amounts, balances, transaction) => {
+        expect(error).toBe(null);
+        expect(amounts).toStrictEqual({});
+        expect(balances).toStrictEqual(expectedBalances);
+        expect(transaction).toBe(null);
+        done();
+      });
+    });
+  });
+
+  test('Test pool payments handling [9]', (done) => {
+    configCopy.auxiliary = auxiliaryConfig;
+    configCopy.auxiliary.daemons = auxiliaryDaemons;
+    configCopy.auxiliary.payments = auxiliaryPaymentsConfig;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const payments = { 'address1': 5000 };
+    nock('http://127.0.0.2:8336')
+      .post('/', (body) => body.method === 'sendmany')
+      .reply(200, JSON.stringify({
+        id: 'nocktest',
+        error: true,
+        result: null,
+      }));
+    mockSetupDaemons(pool, () => {
+      pool.handleAuxiliaryPayments(payments, (error, amounts, balances, transaction) => {
+        expect(error).toBe(true);
+        expect(amounts).toStrictEqual({});
+        expect(balances).toStrictEqual({});
+        expect(transaction).toBe(null);
+        done();
+      });
+    });
+  });
+
+  test('Test pool payments handling [10]', (done) => {
+    configCopy.auxiliary = auxiliaryConfig;
+    configCopy.auxiliary.daemons = auxiliaryDaemons;
+    configCopy.auxiliary.payments = auxiliaryPaymentsConfig;
+    const pool = new Pool(configCopy, configMainCopy, () => {});
+    const payments = { 'address1': 5000 };
+    nock('http://127.0.0.2:8336')
+      .post('/', (body) => body.method === 'sendmany')
+      .reply(200, JSON.stringify({
+        id: 'nocktest',
+        error: null,
+        result: null,
+      }));
+    mockSetupDaemons(pool, () => {
+      pool.handleAuxiliaryPayments(payments, (error, amounts, balances, transaction) => {
+        expect(error).toBe('bad-transaction-undefined');
+        expect(amounts).toStrictEqual({});
+        expect(balances).toStrictEqual({});
+        expect(transaction).toBe(null);
+        done();
+      });
     });
   });
 });

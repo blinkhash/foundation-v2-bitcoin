@@ -16,7 +16,9 @@ exports.startingMessageText9 = () => 'Server initialized successfully ...';
 
 // Loader Text
 exports.loaderDaemonsText1 = () => 'There are no primary daemons active, so the pool cannot be started. Check your configuration files';
-exports.loaderDaemonsText2 = () => 'There are no auxiliary daemons active, so the pool cannot be started. Check your configuration files';
+exports.loaderDaemonsText2 = () => 'There are no primary payment daemons active, so the pool cannot be started. Check your configuration files';
+exports.loaderDaemonsText3 = () => 'There are no auxiliary daemons active, so the pool cannot be started. Check your configuration files';
+exports.loaderDaemonsText4 = () => 'There are no auxiliary payment daemons active, so the pool cannot be started. Check your configuration files';
 exports.loaderPortsText1 = (currentPort) => `Two or more ports are overlapping on ${ currentPort }. Check your configuration files`;
 exports.loaderRecipientsText1 = () => 'The recipient percentage is greater than 100%. Check your configuration files';
 exports.loaderRecipientsText2 = () => 'The recipient percentage is greater than 40%. Are you sure that you configured it properly?';
@@ -50,6 +52,11 @@ exports.stratumPaymentsText1 = (error) => `RPC error when requesting transaction
 exports.stratumPaymentsText2 = (transaction) => `The daemon reports that the transaction is invalid: ${ transaction }`;
 exports.stratumPaymentsText3 = (transaction) => `Unable to load transaction data from the daemon: ${ transaction }`;
 exports.stratumPaymentsText4 = (transaction) => `The daemon reports no details for the transaction: ${ transaction }`;
+exports.stratumPaymentsText5 = (error) => `RPC error when requesting unspent transaction details from daemon: ${ error }`;
+exports.stratumPaymentsText6 = (balance, amounts) => `Insufficient funds (${ balance }) to process payments (${ amounts })`;
+exports.stratumPaymentsText7 = (error) => `RPC error when attempting to send out payments to miners: ${ error }`;
+exports.stratumPaymentsText8 = (total, symbol, count, transaction) => `Sent ${ total } ${ symbol } to ${ count } miners: ${ transaction }`;
+exports.stratumPaymentsText9 = () => 'The daemon did not return a transaction on payout. Manual intervention may be required';
 exports.stratumPollingText1 = (coin, height) => `Requested template from primary chain (${ coin }:${ height }) via RPC polling`;
 exports.stratumPollingText2 = (coin, height) => `Requested template from auxiliary chain (${ coin }:${ height }) via RPC polling`;
 exports.stratumRecipientsText1 = () => 'No recipients have been added, which means that no fees will be taken';

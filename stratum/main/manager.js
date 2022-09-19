@@ -90,6 +90,7 @@ const Manager = function(config, configMain) {
         port: client.socket.localPort,
         addrPrimary: client.addrPrimary,
         addrAuxiliary: client.addrAuxiliary,
+        blockType: 'share',
         difficulty: difficulty,
         identifier: _this.configMain.identifier || '',
         error: error[1],

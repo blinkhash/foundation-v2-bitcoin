@@ -63,11 +63,6 @@ daemons1.username = '';
 daemons1.password = '';
 config.primary.daemons.push(daemons1);
 
-// Payment Configuration
-// No Payments for Stratum Modules
-config.primary.payments = {};
-config.primary.payments.transactionFee = 0.004;
-
 // Recipients Configuration
 config.primary.recipients = [];
 

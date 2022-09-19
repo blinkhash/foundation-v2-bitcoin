@@ -24,10 +24,13 @@ const Pool = function(config, configMain, callback) {
   this.callback = callback;
 
   // Pool Variables [2]
-  this.primary = {};
+  this.primary = {
+    payments: { enabled: _this.config.primary.payments &&
+      _this.config.primary.payments.enabled }};
   this.auxiliary = {
     enabled: _this.config.auxiliary && _this.config.auxiliary.enabled,
-  };
+    payments: { enabled: _this.config.auxiliary && _this.config.auxiliary.enabled &&
+      _this.config.auxiliary.payments && _this.config.auxiliary.payments.enabled }};
 
   // Emit Logging Events
   this.emitLog = function(level, limiting, text) {
@@ -141,7 +144,8 @@ const Pool = function(config, configMain, callback) {
 
     // Specify Block Features
     let totalWork = 0;
-    const transactionFee = _this.config.primary.payments.transactionFee;
+    const transactionFee = _this.config.primary.payments ?
+      _this.config.primary.payments.transactionFee : 0;
     const maxTime = Math.max(...workers.flatMap((worker) => worker.times));
     const reward = block.reward - transactionFee;
 
@@ -151,7 +155,6 @@ const Pool = function(config, configMain, callback) {
 
       // Validate Shares for Workers w/ 51% Time
       let shares = worker.work;
-      const identifier = `${ worker.miner }_${ worker.solo }_${ worker.type }`;
       const timePeriod = utils.roundTo(worker.times / maxTime, 2);
       if (timePeriod < 0.51) {
         const lost = shares * (1 - timePeriod);
@@ -160,17 +163,17 @@ const Pool = function(config, configMain, callback) {
 
       // Add Validated Shares to Records
       totalWork += shares;
-      if (identifier in validated) validated[identifier] += shares;
-      else validated[identifier] = shares;
+      if (worker.miner in validated) validated[worker.miner] += shares;
+      else validated[worker.miner] = shares;
     });
 
     // Determine Worker Rewards
     const updates = {};
-    Object.keys(validated).forEach((identifier) => {
-      const percentage = validated[identifier] / totalWork;
+    Object.keys(validated).forEach((address) => {
+      const percentage = validated[address] / totalWork;
       const minerReward = utils.roundTo(reward * percentage, 8);
-      if (identifier in updates) updates[identifier] += minerReward;
-      else updates[identifier] = minerReward;
+      if (address in updates) updates[address] += minerReward;
+      else updates[address] = minerReward;
     });
 
     // Return Worker Rewards
@@ -182,7 +185,7 @@ const Pool = function(config, configMain, callback) {
 
     // Block is Not Valid
     if (!blockValid) {
-      callback(false, shareData);
+      callback(null, shareData);
       return;
     }
 
@@ -258,11 +261,11 @@ const Pool = function(config, configMain, callback) {
       const rejected = results.filter((result) => result.response === 'rejected');
       const accepted = results.filter((result) => !result.error && result.response !== 'rejected');
       if (rejected.length >= 1) {
-        callback(true, _this.text.stratumBlocksText3(rejected[0].instance.host));
+        callback('bad-primary-rejected', _this.text.stratumBlocksText3(rejected[0].instance.host));
       } else if (accepted.length < 1) {
-        callback(true, _this.text.stratumBlocksText2(results[0].instance.host, JSON.stringify(results[0].error)));
+        callback('bad-primary-orphan', _this.text.stratumBlocksText2(results[0].instance.host, JSON.stringify(results[0].error)));
       }
-      callback(false, null);
+      callback(null, null);
     });
   };
 
@@ -349,18 +352,18 @@ const Pool = function(config, configMain, callback) {
       // Immature Behavior
       case 'immature':
         immature = _this.handleValidation(block, current);
-        Object.keys(immature).forEach((identifier) => {
-          if (identifier in updates) updates[identifier].immature += immature[identifier];
-          else updates[identifier] = { immature: immature[identifier], generate: 0 };
+        Object.keys(immature).forEach((address) => {
+          if (address in updates) updates[address].immature += immature[address];
+          else updates[address] = { immature: immature[address], generate: 0 };
         });
         break;
 
       // Generate Behavior
       case 'generate':
         generate = _this.handleValidation(block, current);
-        Object.keys(generate).forEach((identifier) => {
-          if (identifier in updates) updates[identifier].generate += generate[identifier];
-          else updates[identifier] = { immature: 0, generate: generate[identifier] };
+        Object.keys(generate).forEach((address) => {
+          if (address in updates) updates[address].generate += generate[address];
+          else updates[address] = { immature: 0, generate: generate[address] };
         });
         break;
 
@@ -374,12 +377,101 @@ const Pool = function(config, configMain, callback) {
     callback(updates);
   };
 
+  // Validate Primary Balance and Checks
+  this.handlePrimaryBalances = function(payments, callback) {
+
+    // Calculate Total Payment to Each Miner
+    const amounts = {};
+    Object.keys(payments).forEach((address) => {
+      amounts[address] = utils.roundTo(payments[address], 8);
+    });
+
+    // Build Daemon Commands
+    const total = Object.values(amounts).reduce((sum, cur) => sum + cur, 0);
+    const minConfirmations = _this.config.primary.payments ?
+      _this.config.primary.payments.minConfirmations : 0;
+    const commands = [['listunspent', [minConfirmations, 99999999]]];
+
+    // Get Current Balance of Daemon
+    if (_this.primary.payments.enabled) {
+      _this.primary.payments.daemon.sendCommands(commands, true, (result) => {
+        if (result.error) {
+          _this.emitLog('error', false, _this.text.stratumPaymentsText5(JSON.stringify(result.error)));
+          callback(result.error, null);
+          return;
+        }
+
+        // Calculate Total Balance from Response
+        let balance = 0;
+        if (result.response != null && result.response.length >= 1) {
+          result.response.forEach((transaction) => {
+            if (transaction.address && transaction.address !== null) {
+              balance += parseFloat(transaction.amount || 0);
+            }
+          });
+        }
+
+        // Check if Balance >= Amounts
+        if (balance < total) {
+          _this.emitLog('error', false, _this.text.stratumPaymentsText6(balance, total));
+          callback('bad-insufficient-funds', null);
+        } else callback(null, balance);
+      });
+    } else callback(null, 0);
+  };
+
+  // Send Primary Payments to Miners
+  this.handlePrimaryPayments = function(payments, callback) {
+
+    // Calculate Total Payment to Each Miner
+    const amounts = {};
+    Object.keys(payments).forEach((address) => {
+      amounts[address] = utils.roundTo(payments[address], 8);
+    });
+
+    // Validate Amounts >= Minimum
+    const balances = {};
+    Object.keys(amounts).forEach((address) => {
+      if (amounts[address] < _this.config.primary.payments.minPayment ||
+        !_this.primary.payments.enabled) {
+        balances[address] = amounts[address];
+        delete amounts[address];
+      }
+    });
+
+    // Build Daemon Commands
+    const total = Object.values(amounts).reduce((sum, cur) => sum + cur, 0);
+    const commands = [['sendmany', ['', amounts]]];
+
+    // Send Primary Payments using Sendmany
+    if (_this.primary.payments.enabled && total > 0) {
+      _this.primary.payments.daemon.sendCommands(commands, true, (result) => {
+        if (result.error) {
+          _this.emitLog('error', false, _this.text.stratumPaymentsText7(JSON.stringify(result.error)));
+          callback(result.error, {}, {}, null);
+          return;
+        }
+
+        // Return Transaction through Callback
+        if (result.response) {
+          const count = Object.keys(amounts).length;
+          const symbol = _this.config.primary.coin.symbol;
+          _this.emitLog('special', false, _this.text.stratumPaymentsText8(total, symbol, count, result.response));
+          callback(null, amounts, balances, result.response);
+        } else {
+          _this.emitLog('error', false, _this.text.stratumPaymentsText9());
+          callback('bad-transaction-undefined', {}, {}, null);
+        }
+      });
+    } else callback(null, amounts, balances, null);
+  };
+
   // Process Auxiliary Block Candidate
   this.handleAuxiliary = function(shareData, blockValid, callback) {
 
     // Block is Not Valid
     if (!blockValid) {
-      callback(false, shareData);
+      callback(null, shareData);
       return;
     }
 
@@ -472,11 +564,11 @@ const Pool = function(config, configMain, callback) {
       const rejected = results.filter((result) => result.response === 'rejected');
       const accepted = results.filter((result) => !result.error && result.response !== 'rejected');
       if (rejected.length >= 1) {
-        callback(true, _this.text.stratumBlocksText6(rejected[0].instance.host));
+        callback('bad-auxiliary-rejected', _this.text.stratumBlocksText6(rejected[0].instance.host));
       } else if (accepted.length < 1) {
-        callback(true, _this.text.stratumBlocksText5(results[0].instance.host, JSON.stringify(results[0].error)));
+        callback('bad-auxiliary-orphan', _this.text.stratumBlocksText5(results[0].instance.host, JSON.stringify(results[0].error)));
       }
-      callback(false, null);
+      callback(null, null);
     });
   };
 
@@ -556,18 +648,18 @@ const Pool = function(config, configMain, callback) {
       // Immature Behavior
       case 'immature':
         immature = _this.handleValidation(block, current);
-        Object.keys(immature).forEach((identifier) => {
-          if (identifier in updates) updates[identifier].immature += immature[identifier];
-          else updates[identifier] = { immature: immature[identifier], generate: 0 };
+        Object.keys(immature).forEach((address) => {
+          if (address in updates) updates[address].immature += immature[address];
+          else updates[address] = { immature: immature[address], generate: 0 };
         });
         break;
 
       // Generate Behavior
       case 'generate':
         generate = _this.handleValidation(block, current);
-        Object.keys(generate).forEach((identifier) => {
-          if (identifier in updates) updates[identifier].generate += generate[identifier];
-          else updates[identifier] = { immature: 0, generate: generate[identifier] };
+        Object.keys(generate).forEach((address) => {
+          if (address in updates) updates[address].generate += generate[address];
+          else updates[address] = { immature: 0, generate: generate[address] };
         });
         break;
 
@@ -581,27 +673,143 @@ const Pool = function(config, configMain, callback) {
     callback(updates);
   };
 
-  // Build Stratum Daemons
-  this.setupDaemons = function(callback) {
+  // Validate Auxiliary Balance and Checks
+  this.handleAuxiliaryBalances = function(payments, callback) {
+
+    // Calculate Total Payment to Each Miner
+    const amounts = {};
+    Object.keys(payments).forEach((address) => {
+      amounts[address] = utils.roundTo(payments[address], 8);
+    });
+
+    // Build Daemon Commands
+    const total = Object.values(amounts).reduce((sum, cur) => sum + cur, 0);
+    const minConfirmations = _this.config.auxiliary.payments ?
+      _this.config.auxiliary.payments.minConfirmations : 0;
+    const commands = [['listunspent', [minConfirmations, 99999999]]];
+
+    // Get Current Balance of Daemon
+    if (_this.auxiliary.payments.enabled) {
+      _this.auxiliary.payments.daemon.sendCommands(commands, true, (result) => {
+        if (result.error) {
+          _this.emitLog('error', false, _this.text.stratumPaymentsText5(JSON.stringify(result.error)));
+          callback(result.error, null);
+          return;
+        }
+
+        // Calculate Total Balance from Response
+        let balance = 0;
+        if (result.response != null && result.response.length >= 1) {
+          result.response.forEach((transaction) => {
+            if (transaction.address && transaction.address !== null) {
+              balance += parseFloat(transaction.amount || 0);
+            }
+          });
+        }
+
+        // Check if Balance >= Amounts
+        if (balance < total) {
+          _this.emitLog('error', false, _this.text.stratumPaymentsText6(balance, total));
+          callback('bad-insufficient-funds', null);
+        } else callback(null, balance);
+      });
+    } else callback(null, 0);
+  };
+
+  // Send Auxiliary Payments to Miners
+  this.handleAuxiliaryPayments = function(payments, callback) {
+
+    // Calculate Total Payment to Each Miner
+    const amounts = {};
+    Object.keys(payments).forEach((address) => {
+      amounts[address] = utils.roundTo(payments[address], 8);
+    });
+
+    // Validate Amounts >= Minimum
+    const balances = {};
+    Object.keys(amounts).forEach((address) => {
+      if (amounts[address] < _this.config.auxiliary.payments.minPayment ||
+        !_this.auxiliary.payments.enabled) {
+        balances[address] = amounts[address];
+        delete amounts[address];
+      }
+    });
+
+    // Build Daemon Commands
+    const total = Object.values(amounts).reduce((sum, cur) => sum + cur, 0);
+    const commands = [['sendmany', ['', amounts]]];
+
+    // Send Aauxiliary Payments using Sendmany
+    if (_this.auxiliary.payments.enabled && total > 0) {
+      _this.auxiliary.payments.daemon.sendCommands(commands, true, (result) => {
+        if (result.error) {
+          _this.emitLog('error', false, _this.text.stratumPaymentsText7(JSON.stringify(result.error)));
+          callback(result.error, {}, {}, null);
+          return;
+        }
+
+        // Return Transaction through Callback
+        if (result.response) {
+          const count = Object.keys(amounts).length;
+          const symbol = _this.config.auxiliary.coin.symbol;
+          _this.emitLog('special', false, _this.text.stratumPaymentsText8(total, symbol, count, result.response));
+          callback(null, amounts, balances, result.response);
+        } else {
+          _this.emitLog('error', false, _this.text.stratumPaymentsText9());
+          callback('bad-transaction-undefined', {}, {}, null);
+        }
+      });
+    } else callback(null, amounts, balances, null);
+  };
+
+  // Build Primary Stratum Daemons
+  this.setupPrimaryDaemons = function(callback) {
 
     // Load Daemons from Configuration
     const primaryDaemons = _this.config.primary.daemons;
-    const auxiliaryDaemons = _this.auxiliary.enabled ? _this.config.auxiliary.daemons : [];
+    const primaryPaymentDaemon = _this.primary.payments.enabled ?
+      [_this.config.primary.payments.daemon] : [];
 
     // Build Daemon Instances
     _this.primary.daemon = new Daemon(primaryDaemons);
-    _this.auxiliary.daemon = new Daemon(auxiliaryDaemons);
+    _this.primary.payments.daemon = new Daemon(primaryPaymentDaemon);
 
-    // Initialize Daemons and Load Settings
+    // Initialize Primary Daemons and Load Settings
     _this.primary.daemon.checkInstances((error) => {
       if (error) _this.emitLog('error', false, _this.text.loaderDaemonsText1());
-      else if (_this.auxiliary.enabled) {
-        _this.auxiliary.daemon.checkInstances((error) => {
+      else if (_this.primary.payments.enabled) {
+        _this.primary.payments.daemon.checkInstances((error) => {
           if (error) _this.emitLog('error', false, _this.text.loaderDaemonsText2());
           else callback();
         });
       } else callback();
     });
+  };
+
+  // Build Auxiliary Stratum Daemons
+  this.setupAuxiliaryDaemons = function(callback) {
+
+    // Load Daemons from Configuration
+    const auxiliaryDaemons = _this.auxiliary.enabled ? _this.config.auxiliary.daemons : [];
+    const auxiliaryPaymentDaemon = _this.auxiliary.payments.enabled ?
+      [_this.config.auxiliary.payments.daemon] : [];
+
+    // Build Daemon Instances
+    _this.auxiliary.daemon = new Daemon(auxiliaryDaemons);
+    _this.auxiliary.payments.daemon = new Daemon(auxiliaryPaymentDaemon);
+
+    // Initialize Auxiliary Daemons and Load Settings
+    if (_this.auxiliary.enabled) {
+      _this.auxiliary.daemon.checkInstances((error) => {
+        if (error) _this.emitLog('error', false, _this.text.loaderDaemonsText3());
+        else if (_this.auxiliary.payments.enabled) {
+          _this.auxiliary.payments.daemon.checkInstances((error) => {
+            if (error) _this.emitLog('error', false, _this.text.loaderDaemonsText4());
+            else callback();
+          });
+        } else callback();
+      });
+    } else callback();
   };
 
   // Setup Pool Ports
@@ -664,6 +872,7 @@ const Pool = function(config, configMain, callback) {
       _this.statistics.difficulty = difficulty * Algorithms.sha256d.multiplier;
       _this.config.settings.testnet = _this.settings.testnet;
 
+      // Handle Callback
       callback();
     });
   };

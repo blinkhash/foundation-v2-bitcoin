@@ -197,3 +197,33 @@ exports.getTransaction = function() {
     'hex': '01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff06033d6b3d0101ffffffff010010a5d4e8000000232103729ae92c9d1b6f73bf9fbaf5571e028209f28c4d985fa2891d7bc1d865c3ee36ac00000000'
   };
 };
+
+// Mock Daemon ListUnspent Data
+exports.listUnspent = function() {
+  return [{
+    'txid': 'ef14b7dbcb4ff218323be32e2f671a6767d049c18cb7877ea958a10c66b48d0c',
+    'amount': 11.87500000,
+    'confirmations': 61278,
+    'spendable': true,
+    'address': 'tltc1q55af62wuz6ng6q9p0s7k7sle4u23j393evy9mp',
+    'label': '',
+    'vout': 0,
+    'scriptPubKey': '0014a53a9d29dc16a68d00a17c3d6f43f9af151944b1',
+    'solvable': true,
+    'desc': 'wpkh([d2cd2cd8/0\'/0\'/0\']03be30ab85f0431452bac225378cd1f8680f307f35adbf66007eb1a90cb4e95be2)#x6r4s3da',
+    'safe': true
+  },
+  {
+    'txid': 'ef14b7dbcb4ff218323be32e2f671a6767d049c18cb7877ea958a10c66b48d0c',
+    'amount': 0.62500000,
+    'confirmations': 61278,
+    'spendable': true,
+    'address': 'tltc1q55af62wuz6ng6q9p0s7k7sle4u23j393evy9mp',
+    'label': '',
+    'vout': 1,
+    'scriptPubKey': '0014a53a9d29dc16a68d00a17c3d6f43f9af151944b1',
+    'solvable': true,
+    'desc': 'wpkh([d2cd2cd8/0\'/0\'/0\']03be30ab85f0431452bac225378cd1f8680f307f35adbf66007eb1a90cb4e95be2)#x6r4s3da',
+    'safe': true
+  }];
+};
