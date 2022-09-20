@@ -325,7 +325,7 @@ describe('Test client functionality', () => {
 
   test('Test client message validation [13]', (done) => {
     const socket = mockSocket();
-    configCopy.banning.checkThreshold = 5;
+    configCopy.settings.banning.checkThreshold = 5;
     const client = new Client(configCopy, socket, 0, () => {});
     client.authorized = true;
     client.extraNonce1 = 'test';
@@ -340,8 +340,8 @@ describe('Test client functionality', () => {
 
   test('Test client message validation [14]', (done) => {
     const socket = mockSocket();
-    configCopy.banning.checkThreshold = 5;
-    configCopy.banning.invalidPercent = 50;
+    configCopy.settings.banning.checkThreshold = 5;
+    configCopy.settings.banning.invalidPercent = 50;
     const client = new Client(configCopy, socket, 0, () => {});
     client.authorized = true;
     client.extraNonce1 = 'test';
@@ -405,7 +405,7 @@ describe('Test client functionality', () => {
 
   test('Test client job updates [2]', (done) => {
     const socket = mockSocket();
-    configCopy.settings.connectionTimeout = 10;
+    configCopy.settings.timeout.connection = 10;
     const client = new Client(configCopy, socket, 0, () => {});
     client.activity = 0;
     client.socket.on('log', (text) => {

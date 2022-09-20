@@ -155,8 +155,8 @@ const Client = function(config, socket, id, authorizeFn) {
 
     // Check if Tracked Shares Exceeds Ban Threshold
     const totalShares = _this.shares.valid + _this.shares.invalid;
-    if (totalShares >= _this.config.banning.checkThreshold) {
-      if (((_this.shares.invalid / totalShares) * 100) < _this.config.banning.invalidPercent) {
+    if (totalShares >= _this.config.settings.banning.checkThreshold) {
+      if (((_this.shares.invalid / totalShares) * 100) < _this.config.settings.banning.invalidPercent) {
         this.shares = { valid: 0, invalid: 0 };
       } else {
         _this.socket.destroy();
@@ -193,7 +193,7 @@ const Client = function(config, socket, id, authorizeFn) {
 
     // Check Processed Shares
     const activityAgo = Date.now() - _this.activity;
-    if (activityAgo > _this.config.settings.connectionTimeout) {
+    if (activityAgo > _this.config.settings.timeout.connection) {
       const message = `The last submitted share was ${ activityAgo / 1000 | 0 } seconds ago`;
       _this.emit('client.socket.timeout', message);
       _this.socket.destroy();

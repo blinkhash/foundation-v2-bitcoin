@@ -28,7 +28,7 @@ const Network = function(config, configMain, authorizeFn) {
       // Calculate Time Left on Ban
       const bannedTime = _this.bannedIPs[client.socket.remoteAddress];
       const bannedTimeAgo = Date.now() - bannedTime;
-      const bannedTimeLeft = _this.config.banning.banLength - bannedTimeAgo;
+      const bannedTimeLeft = _this.config.settings.banning.banLength - bannedTimeAgo;
 
       // Kick or Forgive Client if Served Time
       if (bannedTimeLeft > 0) {
@@ -55,7 +55,7 @@ const Network = function(config, configMain, authorizeFn) {
     if (_this.timeoutInterval) clearTimeout(_this.timeoutInterval);
     _this.timeoutInterval = setTimeout(() => {
       _this.emit('network.timeout');
-    }, _this.config.settings.jobRebroadcastTimeout);
+    }, _this.config.settings.timeout.rebroadcast);
   };
 
   // Manage New Client Connections
@@ -91,11 +91,11 @@ const Network = function(config, configMain, authorizeFn) {
     setInterval(() => {
       Object.keys(_this.bannedIPs).forEach((ip) => {
         const banTime = _this.bannedIPs[ip];
-        if (Date.now() - banTime > _this.config.banning.banLength) {
+        if (Date.now() - banTime > _this.config.settings.banning.banLength) {
           delete _this.bannedIPs[ip];
         }
       });
-    }, _this.config.banning.purgeInterval);
+    }, _this.config.settings.banning.purgeInterval);
 
     // Filter Ports for Activity
     const stratumPorts = _this.config.ports.filter((port) => port.enabled);

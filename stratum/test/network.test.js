@@ -73,7 +73,7 @@ describe('Test network functionality', () => {
   });
 
   test('Test network banning capabilities [2]', (done) => {
-    configCopy.banning.banLength = -1;
+    configCopy.settings.banning.banLength = -1;
     const network = new Network(configCopy, configMainCopy, () => {});
     const client = mockClient();
     client.on('client.ban.forgave', () => {
@@ -85,7 +85,7 @@ describe('Test network functionality', () => {
   });
 
   test('Test network job broadcasting', (done) => {
-    configCopy.settings.connectionTimeout = -1;
+    configCopy.settings.timeout.connection = -1;
     const network = new Network(configCopy, configMainCopy, () => {});
     const template = new Template(jobId.toString(16), configCopy, rpcDataCopy, extraNonce, null);
     const socket = mockSocket();

@@ -1023,7 +1023,7 @@ const Pool = function(config, configMain, callback) {
 
     // Build Initial Variables
     let pollingFlag = false;
-    const pollingInterval = _this.config.settings.blockRefreshInterval;
+    const pollingInterval = _this.config.settings.interval.blocks;
 
     // Handle Polling Interval
     setInterval(() => {
@@ -1153,7 +1153,7 @@ const Pool = function(config, configMain, callback) {
     // Handle Periods Without Found Blocks/Shares
     _this.network.on('network.timeout', () => {
       _this.handlePrimaryTemplate(false, (error, rpcData, newBlock) => {
-        _this.emitLog('debug', true, _this.text.stratumNetworkText1(_this.config.settings.jobRebroadcastTimeout / 1000));
+        _this.emitLog('debug', true, _this.text.stratumNetworkText1(_this.config.settings.timeout.rebroadcast / 1000));
         if (error || newBlock) return;
         _this.manager.handleUpdates(rpcData);
       });
