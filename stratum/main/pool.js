@@ -146,12 +146,24 @@ const Pool = function(config, configMain, callback) {
     let totalWork = 0;
     const transactionFee = _this.config.primary.payments ?
       _this.config.primary.payments.transactionFee : 0;
-    const maxTime = Math.max(...workers.flatMap((worker) => worker.times));
+
+    // Calculate Worker Times
+    const combined = {};
+    workers.forEach((worker) => {
+      if (worker.miner in combined) {
+        combined[worker.miner].times += worker.times;
+        combined[worker.miner].work += worker.work;
+      } else combined[worker.miner] = { times: worker.times, work: worker.work };
+    });
+
+    // Calculate Maximum Worker Time
+    const maxTime = Math.max(...Object.keys(combined).map((worker) => combined[worker].times));
     const reward = block.reward - transactionFee;
 
     // Calculate Worker Percentage
     const validated = {};
-    workers.forEach((worker) => {
+    Object.keys(combined).forEach((address) => {
+      const worker = combined[address];
 
       // Validate Shares for Workers w/ 51% Time
       let shares = worker.work;
@@ -163,8 +175,8 @@ const Pool = function(config, configMain, callback) {
 
       // Add Validated Shares to Records
       totalWork += shares;
-      if (worker.miner in validated) validated[worker.miner] += shares;
-      else validated[worker.miner] = shares;
+      if (address in validated) validated[address] += shares;
+      else validated[address] = shares;
     });
 
     // Determine Worker Rewards
