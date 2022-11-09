@@ -4,6 +4,7 @@ const bs58check = require('bs58check');
 const crypto = require('crypto');
 const merkleTree = require('merkle-lib');
 const merkleProof = require('merkle-lib/proof');
+const net = require('net');
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -37,6 +38,27 @@ exports.bigIntFromBitsHex = function(bitsString) {
 exports.bufferToBigInt = function(buffer, start = 0, end = buffer.length) {
   const hexStr = buffer.slice(start, end).toString('hex');
   return BigInt(`0x${hexStr}`);
+};
+
+// Check if Host/Port is Active
+exports.checkConnection = function(host, port, timeout) {
+  return new Promise((resolve, reject) => {
+    timeout = timeout || 10000;
+    const timer = setTimeout(() => {
+      reject('timeout');
+      /* eslint-disable-next-line no-use-before-define */
+      socket.end();
+    }, timeout);
+    const socket = net.createConnection(port, host, () => {
+      clearTimeout(timer);
+      resolve();
+      socket.end();
+    });
+    socket.on('error', (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
 };
 
 // Convert Transaction Hashes to Buffers

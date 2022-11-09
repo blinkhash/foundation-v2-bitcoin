@@ -3,7 +3,21 @@ exports.builderWorkersText1 = (forkId) => `Fork ${ forkId } died, starting repla
 exports.builderWorkersText2 = () => 'No valid pool configs exist or are enabled. Check your configuration files';
 exports.builderWorkersText3 = (numConfigs, numForks) => `Started ${ numConfigs } pool(s) on ${ numForks } thread(s)`;
 
+// Checks Text
+exports.checksMessageText1 = () => '(1) Successfully validated primary daemons ...';
+exports.checksMessageText2 = () => '(1b) Successfully validated auxiliary daemons ...';
+exports.checksMessageText3 = (ports) => `(2) Finished setting up stratum ports: ${ ports } ...`;
+exports.checksMessageText4 = () => '(3) Successfully generated settings configuration  ...';
+exports.checksMessageText5 = () => '(4) Finished setting up specified recipients for block rewards ...';
+exports.checksMessageText6 = () => '(5) Finished setting up stratum job manager ...';
+exports.checksMessageText7 = () => '(6) Finished setting up connection to primary blockchain ...';
+exports.checksMessageText8 = () => '(6b) Finished setting up connection to auxiliary blockchain ...';
+exports.checksMessageText9 = () => '(7) Successfully generated initial stratum job request ...';
+exports.checksMessageText10 = () => '(8) Finished setting up block polling framework ...';
+exports.checksMessageText11 = () => '(9) Finished setting up blockchain network connection ...';
+
 // Starting Text
+exports.startingErrorText1 = () => 'Could not start pool, error on initialization ...';
 exports.startingMessageText1 = (pool) => `Initializing server (${ pool }) ...`;
 exports.startingMessageText2 = (coins) => `Connected coins: ${ coins }`;
 exports.startingMessageText3 = (network) => `Active network: ${ network }`;
@@ -59,6 +73,10 @@ exports.stratumPaymentsText8 = (total, symbol, count, transaction) => `Sent ${ t
 exports.stratumPaymentsText9 = () => 'The daemon did not return a transaction on payout. Manual intervention may be required';
 exports.stratumPollingText1 = (coin, height) => `Requested template from primary chain (${ coin }:${ height }) via RPC polling`;
 exports.stratumPollingText2 = (coin, height) => `Requested template from auxiliary chain (${ coin }:${ height }) via RPC polling`;
+exports.stratumZmqText1 = (error) => `Received an error when attempting to establish a primary ZMQ subscription: ${ error }`;
+exports.stratumZmqText2 = (error) => `Received an error when attempting to establish an auxiliary ZMQ subscription: ${ error }`;
+exports.stratumZmqText3 = (coin, height) => `Requested template from primary chain (${ coin }:${ height }) via ZMQ subscription`;
+exports.stratumZmqText4 = (coin, height) => `Requested template from auxiliary chain (${ coin }:${ height }) via ZMQ subscription`;
 exports.stratumRecipientsText1 = () => 'No recipients have been added, which means that no fees will be taken';
 exports.stratumSharesText1 = (difficulty, actual, address, ip) => `A share was accepted at difficulty ${ difficulty }/${ actual || 0 } by ${ address } [${ ip }]`;
 exports.stratumSharesText2 = (error, address, ip) => `A share was rejected (${ error }) from ${ address } [${ ip }]`;

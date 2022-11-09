@@ -78,5 +78,11 @@ recipient1.address = '[address]';
 recipient1.percentage = 0.05;
 config.primary.recipients.push(recipient1);
 
+// ZMQ Configuration
+config.primary.zmq = {};
+config.primary.zmq.enabled = false;
+config.primary.zmq.host = '127.0.0.1';
+config.primary.zmq.port = 29000;
+
 // Export Configuration
 module.exports = config;

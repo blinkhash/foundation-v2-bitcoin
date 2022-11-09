@@ -12,6 +12,6 @@ try {
   const threads = new Threads(logger, config).setupThreads();
 
 // Error on Startup
-} catch(e) {
-  throw new Error(e);
+} catch(error) {
+  throw new Error(error);
 }

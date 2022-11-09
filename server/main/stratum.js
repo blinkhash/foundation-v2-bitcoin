@@ -17,15 +17,15 @@ const Stratum = function (logger, config, configMain) {
   this.forkId = process.env.forkId;
 
   // Build Stratum from Configuration
-  this.handleStratum = function() {
+  this.handleStratum = function(callback) {
 
     // Build Stratum Server
-    _this.stratum = new Pool(_this.config, _this.configMain, () => {});
+    _this.stratum = new Pool(_this.config, _this.configMain, callback);
 
     // Handle Stratum Main Events
     _this.stratum.on('pool.started', () => {});
-    _this.stratum.on('pool.log', (severity, text) => {
-      _this.logger[severity]('Pool', _this.config.name, [text]);
+    _this.stratum.on('pool.log', (severity, text, separator) => {
+      _this.logger[severity]('Pool', 'Checks', [text], separator);
     });
 
     // Handle Stratum Share Events
@@ -35,13 +35,13 @@ const Stratum = function (logger, config, configMain) {
       if (shareValid) {
         const address = shareData.addrPrimary.split('.')[0];
         const text = _this.text.stratumSharesText1(shareData.difficulty, shareData.shareDiff, address, shareData.ip);
-        _this.logger['log']('Pool', _this.config.name, [text]);
+        _this.logger['log']('Pool', 'Checks', [text]);
 
       // Processed Share was Rejected
       } else {
         const address = shareData.addrPrimary.split('.')[0];
         const text = _this.text.stratumSharesText2(shareData.error, address, shareData.ip);
-        _this.logger['error']('Pool', _this.config.name, [text]);
+        _this.logger['error']('Pool', 'Checks', [text]);
       }
     });
   };
@@ -78,7 +78,7 @@ const Stratum = function (logger, config, configMain) {
   this.setupStratum = function(callback) {
 
     // Build Daemon/Stratum Functionality
-    _this.handleStratum();
+    _this.handleStratum(callback);
     _this.stratum.setupPrimaryDaemons(() => {
     _this.stratum.setupAuxiliaryDaemons(() => {
     _this.stratum.setupPorts();
@@ -88,14 +88,14 @@ const Stratum = function (logger, config, configMain) {
     _this.stratum.setupPrimaryBlockchain(() => {
     _this.stratum.setupAuxiliaryBlockchain(() => {
     _this.stratum.setupFirstJob(() => {
-    _this.stratum.setupBlockPolling();
+    _this.stratum.setupBlockPolling(() => {
     _this.stratum.setupNetwork(() => {
       _this.outputStratum()
-      callback()
+      callback(null)
     })
 
     // Too Much Indentation
-    })})})})})});
+    })})})})})})});
   }
 };
 

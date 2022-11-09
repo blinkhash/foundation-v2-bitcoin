@@ -6,6 +6,7 @@ const Network = require('./network');
 const Text = require('../../locales/index');
 const events = require('events');
 const utils = require('./utils');
+const zmq = require('zeromq');
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -26,16 +27,19 @@ const Pool = function(config, configMain, callback) {
   // Pool Variables [2]
   this.primary = {
     payments: { enabled: _this.config.primary.payments &&
-      _this.config.primary.payments.enabled }};
+      _this.config.primary.payments.enabled },
+    zmq: { enabled: _this.config.primary.zmq && _this.config.primary.zmq.enabled }};
   this.auxiliary = {
     enabled: _this.config.auxiliary && _this.config.auxiliary.enabled,
     payments: { enabled: _this.config.auxiliary && _this.config.auxiliary.enabled &&
-      _this.config.auxiliary.payments && _this.config.auxiliary.payments.enabled }};
+      _this.config.auxiliary.payments && _this.config.auxiliary.payments.enabled },
+    zmq: { enabled: _this.config.auxiliary && _this.config.auxiliary.zmq &&
+      _this.config.auxiliary.zmq.enabled }};
 
   // Emit Logging Events
-  this.emitLog = function(level, limiting, text) {
+  this.emitLog = function(level, limiting, text, separator) {
     if (!limiting || !process.env.forkId || process.env.forkId === '0') {
-      _this.emit('pool.log', level, text);
+      _this.emit('pool.log', level, text, separator);
       if (level === 'error') _this.callback(text);
     }
   };
@@ -211,6 +215,66 @@ const Pool = function(config, configMain, callback) {
           callback(accepted, shareData);
         });
       }
+    });
+  };
+
+  // Setup Primary Block Pooling
+  this.handlePrimaryBlockPolling = function() {
+
+    // Build Initial Variables
+    let pollingFlag = false;
+    const pollingInterval = _this.config.settings.interval.blocks;
+
+    // Handle Polling Interval
+    setInterval(() => {
+      if (pollingFlag === false) {
+        pollingFlag = true;
+        _this.checkPrimaryTemplate(false, (error, update) => {
+          if (!error && update) {
+            _this.handlePrimaryTemplate(false, (error, result, update) => {
+              pollingFlag = false;
+              if (update) _this.emitLog('log', true, _this.text.stratumPollingText1(_this.config.primary.coin.name, result.height));
+            });
+          } else {
+            pollingFlag = false;
+          }
+        });
+      }
+    }, pollingInterval);
+  };
+
+  // Setup Primary Block ZMQ
+  this.handlePrimaryBlockZmq = function(callback) {
+
+    // Build Initial Variables
+    const sock = zmq.socket('sub');
+    const zmqConfig = _this.config.primary.zmq;
+
+    // Check if ZMQ Connection Can Be Made
+    utils.checkConnection(zmqConfig.host, zmqConfig.port).then(() => {
+      sock.connect(`tcp://${ zmqConfig.host }:${ zmqConfig.port }`);
+      sock.subscribe('hashblock');
+
+      // Handle Block Notifications
+      sock.on('message', () => {
+        _this.handlePrimaryTemplate(false, (error, result, update) => {
+          if (update) _this.emitLog('log', true, _this.text.stratumZmqText3(_this.config.primary.coin.name, result.height));
+        });
+      });
+
+      // Handle Reconnects as Necessary
+      setInterval(() => {
+        sock.connect(`tcp://${ zmqConfig.host }:${ zmqConfig.port }`);
+        sock.subscribe('hashblock');
+      }, _this.config.settings.interval.blocks * 10);
+
+      // Handle Callback
+      callback();
+
+    // ZMQ Connection Threw an Error
+    }, (error) => {
+      _this.emitLog('error', false, _this.text.stratumZmqText1(JSON.stringify(error)));
+      callback(error);
     });
   };
 
@@ -501,6 +565,64 @@ const Pool = function(config, configMain, callback) {
     });
   };
 
+  // Setup Auxiliary Block Pooling
+  this.handleAuxiliaryBlockPolling = function() {
+
+    // Build Initial Variables
+    let pollingFlag = false;
+    const pollingInterval = _this.config.settings.interval.blocks;
+
+    // Handle Polling Interval
+    setInterval(() => {
+      if (pollingFlag === false) {
+        pollingFlag = true;
+        _this.checkAuxiliaryTemplate((error, update) => {
+          if (!error && update) {
+            _this.handleAuxiliaryTemplate((error, result, update) => {
+              if (update) _this.emitLog('log', true, _this.text.stratumPollingText2(_this.config.auxiliary.coin.name, result.height));
+              pollingFlag = false;
+            });
+          }
+        });
+      }
+    }, pollingInterval);
+  };
+
+  // Setup Auxiliary Block ZMQ
+  this.handleAuxiliaryBlockZmq = function(callback) {
+
+    // Build Initial Variables
+    const sock = zmq.socket('sub');
+    const zmqConfig = _this.config.auxiliary.zmq;
+
+    // Check if ZMQ Connection Can Be Made
+    utils.checkConnection(zmqConfig.host, zmqConfig.port).then(() => {
+      sock.connect(`tcp://${ zmqConfig.host }:${ zmqConfig.port }`);
+      sock.subscribe('hashblock');
+
+      // Handle Block Notifications
+      sock.on('message', () => {
+        _this.handleAuxiliaryTemplate((error, result, update) => {
+          if (update) _this.emitLog('log', true, _this.text.stratumZmqText4(_this.config.auxiliary.coin.name, result.height));
+        });
+      });
+
+      // Handle Reconnects as Necessary
+      setInterval(() => {
+        sock.connect(`tcp://${ zmqConfig.host }:${ zmqConfig.port }`);
+        sock.subscribe('hashblock');
+      }, _this.config.settings.interval.blocks * 10);
+
+      // Handle Callback
+      callback();
+
+    // ZMQ Connection Threw an Error
+    }, (error) => {
+      _this.emitLog('error', false, _this.text.stratumZmqText2(JSON.stringify(error)));
+      callback(error);
+    });
+  };
+
   // Check for New Auxiliary Block Template
   this.checkAuxiliaryTemplate = function(callback) {
 
@@ -774,6 +896,38 @@ const Pool = function(config, configMain, callback) {
     } else callback(null, amounts, balances, null);
   };
 
+  // Setup Combined Block Pooling
+  this.handleCombinedBlockPolling = function() {
+
+    // Build Initial Variables
+    let pollingFlag = false;
+    const pollingInterval = _this.config.settings.interval.blocks;
+
+    // Handle Polling Interval
+    setInterval(() => {
+      if (pollingFlag === false) {
+        pollingFlag = true;
+        _this.checkAuxiliaryTemplate((auxError) => {
+          if (!auxError) {
+            _this.handleAuxiliaryTemplate((auxError, auxResult, auxUpdate) => {
+              _this.checkPrimaryTemplate(auxUpdate, (error, update) => {
+                if (auxUpdate) _this.emitLog('log', true, _this.text.stratumPollingText2(_this.config.auxiliary.coin.name, auxResult.height));
+                if (!error && update) {
+                  _this.handlePrimaryTemplate(auxUpdate, (error, result, update) => {
+                    pollingFlag = false;
+                    if (update) _this.emitLog('log', true, _this.text.stratumPollingText1(_this.config.primary.coin.name, result.height));
+                  });
+                } else {
+                  pollingFlag = false;
+                }
+              });
+            });
+          }
+        });
+      }
+    }, pollingInterval);
+  };
+
   // Build Primary Stratum Daemons
   this.setupPrimaryDaemons = function(callback) {
 
@@ -792,9 +946,15 @@ const Pool = function(config, configMain, callback) {
       else if (_this.primary.payments.enabled) {
         _this.primary.payments.daemon.checkInstances((error) => {
           if (error) _this.emitLog('error', false, _this.text.loaderDaemonsText2());
-          else callback();
+          else {
+            _this.emitLog('debug', true, _this.text.checksMessageText1());
+            callback();
+          }
         });
-      } else callback();
+      } else {
+        _this.emitLog('debug', true, _this.text.checksMessageText1());
+        callback();
+      }
     });
   };
 
@@ -817,9 +977,15 @@ const Pool = function(config, configMain, callback) {
         else if (_this.auxiliary.payments.enabled) {
           _this.auxiliary.payments.daemon.checkInstances((error) => {
             if (error) _this.emitLog('error', false, _this.text.loaderDaemonsText4());
-            else callback();
+            else {
+              _this.emitLog('debug', true, _this.text.checksMessageText2());
+              callback();
+            }
           });
-        } else callback();
+        } else {
+          _this.emitLog('debug', true, _this.text.checksMessageText2());
+          callback();
+        }
       });
     } else callback();
   };
@@ -828,13 +994,19 @@ const Pool = function(config, configMain, callback) {
   this.setupPorts = function() {
 
     // Initiailize Each Port w/ VarDiff
-    _this.config.ports.forEach((port) => {
+    _this.config.ports.forEach((port, idx) => {
       const difficultyInstance = new Difficulty(port.difficulty);
       if (port.port in _this.difficulty) _this.difficulty[port.port].removeAllListeners();
       _this.difficulty[port.port] = difficultyInstance;
       _this.difficulty[port.port].on('client.difficulty.new', (client, newDiff) => {
         client.enqueueDifficulty(newDiff);
       });
+
+      // Indicate Ports are Setup Successfully
+      if (idx + 1 === _this.config.ports.length) {
+        const ports = _this.config.ports.flatMap(((port) => port.port));
+        _this.emitLog('debug', true, _this.text.checksMessageText3(ports));
+      }
     });
   };
 
@@ -885,6 +1057,7 @@ const Pool = function(config, configMain, callback) {
       _this.config.settings.testnet = _this.settings.testnet;
 
       // Handle Callback
+      _this.emitLog('debug', true, _this.text.checksMessageText4());
       callback();
     });
   };
@@ -902,6 +1075,9 @@ const Pool = function(config, configMain, callback) {
     _this.config.primary.recipients.forEach((recipient) => {
       _this.statistics.feePercentage += recipient.percentage;
     });
+
+    // Indicate Recipients are Setup Successfully
+    _this.emitLog('debug', true, _this.text.checksMessageText5());
   };
 
   // Setup Pool Job Manager
@@ -966,6 +1142,9 @@ const Pool = function(config, configMain, callback) {
       // Broadcast New Mining Jobs to Clients
       if (_this.network) _this.network.broadcastMiningJobs(template, false);
     });
+
+    // Indicate Manager is Setup Successfully
+    _this.emitLog('debug', true, _this.text.checksMessageText6());
   };
 
   // Setup Primary Blockchain Connection
@@ -979,6 +1158,7 @@ const Pool = function(config, configMain, callback) {
     // Check if Blockchain is Fully Synced
     _this.primary.daemon.sendCommands(commands, false, (results) => {
       if (results.every((r) => !r.error || r.error.code !== -10)) {
+        _this.emitLog('debug', true, _this.text.checksMessageText7());
         callback();
       } else {
         setTimeout(() => _this.setupPrimaryBlockchain(callback), 30000);
@@ -997,6 +1177,7 @@ const Pool = function(config, configMain, callback) {
     if (_this.auxiliary.enabled) {
       _this.auxiliary.daemon.sendCommands(commands, false, (results) => {
         if (results.every((r) => !r.error || r.error.code !== -10)) {
+          _this.emitLog('debug', true, _this.text.checksMessageText8());
           callback();
         } else {
           setTimeout(() => _this.setupAuxiliaryBlockchain(callback), 30000);
@@ -1004,6 +1185,7 @@ const Pool = function(config, configMain, callback) {
         }
       });
     } else {
+      _this.emitLog('debug', true, _this.text.checksMessageText8());
       callback();
     }
   };
@@ -1024,6 +1206,7 @@ const Pool = function(config, configMain, callback) {
               }
             });
           }
+          _this.emitLog('debug', true, _this.text.checksMessageText9());
           callback();
         });
       }
@@ -1031,35 +1214,55 @@ const Pool = function(config, configMain, callback) {
   };
 
   // Setup Pool Block Polling
-  this.setupBlockPolling = function() {
+  this.setupBlockPolling = function(callback) {
 
-    // Build Initial Variables
-    let pollingFlag = false;
-    const pollingInterval = _this.config.settings.interval.blocks;
+    // Primary (No Auxiliary) ZMQ Subscription
+    if (!_this.auxiliary.enabled && _this.primary.zmq.enabled) {
+      _this.handlePrimaryBlockZmq(() => {
+        _this.emitLog('debug', true, _this.text.checksMessageText10());
+        callback();
+      });
 
-    // Handle Polling Interval
-    setInterval(() => {
-      if (pollingFlag === false) {
-        pollingFlag = true;
-        _this.checkAuxiliaryTemplate((auxError) => {
-          if (!auxError) {
-            _this.handleAuxiliaryTemplate((auxError, auxResult, auxUpdate) => {
-              _this.checkPrimaryTemplate(auxUpdate, (error, update) => {
-                if (auxUpdate) _this.emitLog('log', true, _this.text.stratumPollingText2(_this.config.auxiliary.coin.name, auxResult.height));
-                if (!error && update) {
-                  _this.handlePrimaryTemplate(auxUpdate, (error, result, update) => {
-                    pollingFlag = false;
-                    if (update) _this.emitLog('log', true, _this.text.stratumPollingText1(_this.config.primary.coin.name, result.height));
-                  });
-                } else {
-                  pollingFlag = false;
-                }
-              });
-            });
-          }
+    // Primary (No Auxilairy) Block Polling
+    } else if (!_this.auxiliary.enabled) {
+      _this.handlePrimaryBlockPolling();
+      _this.emitLog('debug', true, _this.text.checksMessageText10());
+      callback();
+
+    // Primary ZMQ Subscription, Auxiliary ZMQ Subscription
+    } else if (_this.auxiliary.enabled && _this.primary.zmq.enabled &&
+      _this.auxiliary.zmq.enabled) {
+      _this.handlePrimaryBlockZmq(() => {
+        _this.handleAuxiliaryBlockZmq(() => {
+          _this.emitLog('debug', true, _this.text.checksMessageText10());
+          callback();
         });
-      }
-    }, pollingInterval);
+      });
+
+    // Primary Block Polling, Auxiliary ZMQ Subscription
+    } else if (_this.auxiliary.enabled && !_this.primary.zmq.enabled &&
+      _this.auxiliary.zmq.enabled) {
+      _this.handlePrimaryBlockPolling();
+      _this.handleAuxiliaryBlockZmq(() => {
+        _this.emitLog('debug', true, _this.text.checksMessageText10());
+        callback();
+      });
+
+    // Primary ZMQ Subscription, Auxiliary Block Polling
+    } else if (_this.auxiliary.enabled && _this.primary.zmq.enabled &&
+      !_this.auxiliary.zmq.enabled) {
+      _this.handlePrimaryBlockZmq(() => {
+        _this.handleAuxiliaryBlockPolling();
+        _this.emitLog('debug', true, _this.text.checksMessageText10());
+        callback();
+      });
+
+    // Primary Block Polling, Auxiliary Block Polling
+    } else {
+      _this.handleCombinedBlockPolling();
+      _this.emitLog('debug', true, _this.text.checksMessageText10());
+      callback();
+    }
   };
 
   // Setup Pool Clients
@@ -1086,11 +1289,11 @@ const Pool = function(config, configMain, callback) {
     client.on('client.socket.flooded', () => {
       _this.emitLog('warning', false, _this.text.stratumClientText4(client.sendLabel()));
     });
-    client.on('client.socket.error', (e) => {
-      _this.emitLog('warning', false, _this.text.stratumClientText5(client.sendLabel(), JSON.stringify(e)));
+    client.on('client.socket.error', (error) => {
+      _this.emitLog('warning', false, _this.text.stratumClientText5(client.sendLabel(), JSON.stringify(error)));
     });
-    client.on('client.socket.timeout', (e) => {
-      _this.emitLog('warning', false, _this.text.stratumClientText6(client.sendLabel(), JSON.stringify(e)));
+    client.on('client.socket.timeout', (error) => {
+      _this.emitLog('warning', false, _this.text.stratumClientText6(client.sendLabel(), JSON.stringify(error)));
     });
     client.on('client.socket.disconnect', () => {
       _this.emitLog('warning', false, _this.text.stratumClientText7(client.sendLabel()));
@@ -1159,6 +1362,7 @@ const Pool = function(config, configMain, callback) {
         .filter((port) => port.enabled)
         .flatMap((port) => port.port);
       _this.network.broadcastMiningJobs(_this.manager.currentJob, true);
+      _this.emitLog('debug', true, _this.text.checksMessageText11(), true);
       callback();
     });
 
