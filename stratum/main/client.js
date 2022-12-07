@@ -49,7 +49,7 @@ const Client = function(config, socket, id, authorizeFn) {
   // Validate Client Name
   this.validateName = function(name) {
     if (name.length >= 1) {
-      name = name.toString().replace(/[^a-zA-Z0-9.,]+/g, '');
+      name = name.toString().replace(/[^a-zA-Z0-9.,_-]+/g, '');
     }
     const addresses = name.split(',');
     if (addresses.length > 1) {

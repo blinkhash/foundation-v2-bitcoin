@@ -158,7 +158,7 @@ describe('Test client functionality', () => {
   test('Test client name validation [3]', () => {
     const socket = mockSocket();
     const client = new Client(configCopy, socket, 0, () => {});
-    expect(client.validateName('example!@#$%^&')).toStrictEqual(['example', null]);
+    expect(client.validateName('example.!@#$%^&-_')).toStrictEqual(['example.-_', null]);
   });
 
   test('Test client name validation [4]', () => {
