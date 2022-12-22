@@ -146,6 +146,11 @@ const Pool = function(config, configMain, callback) {
   // Handle Validating Worker Shares
   this.handleValidation = function(block, workers) {
 
+    // Initialize Updates
+    let reward = 0;
+    const updates = {};
+    const validated = {};
+
     // Specify Block Features
     let totalWork = 0;
     const transactionFee = _this.config.primary.payments ?
@@ -162,35 +167,44 @@ const Pool = function(config, configMain, callback) {
 
     // Calculate Maximum Worker Time
     const maxTime = Math.max(...Object.keys(combined).map((worker) => combined[worker].times));
-    const reward = block.reward - transactionFee;
 
-    // Calculate Worker Percentage
-    const validated = {};
-    Object.keys(combined).forEach((address) => {
-      const worker = combined[address];
+    // Reward ONLY If Category Changed
+    // -------------------------------
+    // Pending -> Immature, Generate, Orphan
+    // Immature -> Generate, Orphan
+    // Generate -> Orphan
 
-      // Validate Shares for Workers w/ 51% Time
-      let shares = worker.work;
-      const timePeriod = utils.roundTo(worker.times / maxTime, 2);
-      if (timePeriod < 0.51) {
-        const lost = shares * (1 - timePeriod);
-        shares = utils.roundTo(Math.max(shares - lost, 0), 2);
-      }
+    if (block.previous !== block.category) reward = block.reward - transactionFee;
+    if (block.category === 'orphan' && block.previous === 'pending') reward = 0;
+    if (block.category === 'orphan' && ['immature', 'generate'].includes(block.previous)) reward *= -1;
 
-      // Add Validated Shares to Records
-      totalWork += shares;
-      if (address in validated) validated[address] += shares;
-      else validated[address] = shares;
-    });
+    // Calculate Worker Percentages
+    if (reward !== 0) {
+      Object.keys(combined).forEach((address) => {
+        const worker = combined[address];
 
-    // Determine Worker Rewards
-    const updates = {};
-    Object.keys(validated).forEach((address) => {
-      const percentage = validated[address] / totalWork;
-      const minerReward = utils.roundTo(reward * percentage, 8);
-      if (address in updates) updates[address] += minerReward;
-      else updates[address] = minerReward;
-    });
+        // Validate Shares for Workers w/ 51% Time
+        let shares = worker.work;
+        const timePeriod = utils.roundTo(worker.times / maxTime, 2);
+        if (timePeriod < 0.51) {
+          const lost = shares * (1 - timePeriod);
+          shares = utils.roundTo(Math.max(shares - lost, 0), 2);
+        }
+
+        // Add Validated Shares to Records
+        totalWork += shares;
+        if (address in validated) validated[address] += shares;
+        else validated[address] = shares;
+      });
+
+      // Determine Worker Rewards
+      Object.keys(validated).forEach((address) => {
+        const percentage = validated[address] / totalWork;
+        const minerReward = utils.roundTo(reward * percentage, 8);
+        if (address in updates) updates[address] += minerReward;
+        else updates[address] = minerReward;
+      });
+    }
 
     // Return Worker Rewards
     return updates;
@@ -363,6 +377,7 @@ const Pool = function(config, configMain, callback) {
       if (!Array.isArray(result)) result = [result];
       result.forEach((tx, idx) => {
         const block = blocks[idx] || {};
+        block.previous = block.category;
 
         // Check Daemon Edge Cases
         if (tx.error && tx.error.code === -5) {
@@ -418,11 +433,19 @@ const Pool = function(config, configMain, callback) {
       if (block.type !== 'primary') return;
 
       // Establish Separate Behavior
-      let immature, generate;
+      let orphan, immature, generate;
       switch (block.category) {
 
       // Orphan Behavior
       case 'orphan':
+        orphan = _this.handleValidation(block, current);
+        Object.keys(orphan).forEach((address) => {
+          if (address in updates) updates[address][block.previous] += orphan[address];
+          else {
+            updates[address] = { immature: 0, generate: 0 };
+            updates[address][block.previous] += orphan[address];
+          }
+        });
         break;
 
       // Immature Behavior
@@ -736,6 +759,7 @@ const Pool = function(config, configMain, callback) {
       if (!Array.isArray(result)) result = [result];
       result.forEach((tx, idx) => {
         const block = blocks[idx] || {};
+        block.previous = block.category;
 
         // Check Daemon Edge Cases
         if (tx.error && tx.error.code === -5) {
@@ -784,11 +808,19 @@ const Pool = function(config, configMain, callback) {
       if (block.type !== 'auxiliary') return;
 
       // Establish Separate Behavior
-      let immature, generate;
+      let orphan, immature, generate;
       switch (block.category) {
 
       // Orphan Behavior
       case 'orphan':
+        orphan = _this.handleValidation(block, current);
+        Object.keys(orphan).forEach((address) => {
+          if (address in updates) updates[address][block.previous] += orphan[address];
+          else {
+            updates[address] = { immature: 0, generate: 0 };
+            updates[address][block.previous] += orphan[address];
+          }
+        });
         break;
 
       // Immature Behavior
