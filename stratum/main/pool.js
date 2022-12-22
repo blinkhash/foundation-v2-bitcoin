@@ -198,8 +198,9 @@ const Pool = function(config, configMain, callback) {
       });
 
       // Determine Worker Rewards
+      totalWork = Math.max(totalWork, 1);
       Object.keys(validated).forEach((address) => {
-        const percentage = validated[address] / totalWork;
+        const percentage = Math.max(validated[address], 0) / totalWork;
         const minerReward = utils.roundTo(reward * percentage, 8);
         if (address in updates) updates[address] += minerReward;
         else updates[address] = minerReward;
