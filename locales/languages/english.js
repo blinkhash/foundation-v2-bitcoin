@@ -59,8 +59,6 @@ exports.stratumClientText11 = (client, message) => `A client (${ client }) sent 
 exports.stratumDownloadedText1 = (percent, peers) => `Downloaded ${ percent }% of blockchain from ${ peers } peers`;
 exports.stratumFirstJobText1 = () => 'RPC error with primary daemon instance when creating the first job';
 exports.stratumFirstJobText2 = (difficulty, port, initial) => `Network difficulty (${ difficulty }) is lower than the difficulty on port ${ port } (${ initial })`;
-exports.stratumManagerText1 = () => 'Block notification via RPC after primary block submission';
-exports.stratumManagerText2 = () => 'Block notification via RPC after auxiliary block submission';
 exports.stratumNetworkText1 = (time) => `No new blocks for ${ time } seconds. Updating transactions and rebroadcasting work`;
 exports.stratumPaymentsText1 = (error) => `RPC error when requesting transaction details from daemon: ${ error }`;
 exports.stratumPaymentsText2 = (transaction) => `The daemon reports that the transaction is invalid: ${ transaction }`;

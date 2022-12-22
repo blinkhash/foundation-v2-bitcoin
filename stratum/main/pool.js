@@ -576,11 +576,20 @@ const Pool = function(config, configMain, callback) {
     setInterval(() => {
       if (pollingFlag === false) {
         pollingFlag = true;
-        _this.checkAuxiliaryTemplate((error, update) => {
-          if (!error && update) {
-            _this.handleAuxiliaryTemplate((error, result, update) => {
-              if (update) _this.emitLog('log', true, _this.text.stratumPollingText2(_this.config.auxiliary.coin.name, result.height));
-              pollingFlag = false;
+        _this.checkAuxiliaryTemplate((auxError) => {
+          if (!auxError) {
+            _this.handleAuxiliaryTemplate((auxError, auxResult, auxUpdate) => {
+              _this.checkPrimaryTemplate(auxUpdate, (error, update) => {
+                if (auxUpdate) _this.emitLog('log', true, _this.text.stratumPollingText2(_this.config.auxiliary.coin.name, auxResult.height));
+                if (!error && update) {
+                  _this.handlePrimaryTemplate(auxUpdate, (error, result, update) => {
+                    pollingFlag = false;
+                    if (update) _this.emitLog('log', true, _this.text.stratumPollingText1(_this.config.primary.coin.name, result.height));
+                  });
+                } else {
+                  pollingFlag = false;
+                }
+              });
             });
           }
         });
@@ -602,8 +611,11 @@ const Pool = function(config, configMain, callback) {
 
       // Handle Block Notifications
       sock.on('message', () => {
-        _this.handleAuxiliaryTemplate((error, result, update) => {
-          if (update) _this.emitLog('log', true, _this.text.stratumZmqText4(_this.config.auxiliary.coin.name, result.height));
+        _this.handleAuxiliaryTemplate((auxError, auxResult, auxUpdate) => {
+          if (auxUpdate) _this.emitLog('log', true, _this.text.stratumZmqText4(_this.config.auxiliary.coin.name, auxResult.height));
+          _this.handlePrimaryTemplate(auxUpdate, (error, result, update) => {
+            if (update) _this.emitLog('log', true, _this.text.stratumZmqText3(_this.config.primary.coin.name, result.height));
+          });
         });
       });
 
@@ -1099,20 +1111,12 @@ const Pool = function(config, configMain, callback) {
       // Process Share/Primary Submission
       _this.handlePrimary(shareData, blockValid, (accepted, outputData) => {
         _this.emit('pool.share', outputData, shareValid, accepted);
-        _this.handlePrimaryTemplate(auxBlockValid, (error, result, newBlock) => {
-          if (accepted && newBlock && blockValid) {
-            _this.emitLog('special', false, _this.text.stratumManagerText1());
-          }
-        });
       });
 
       // Process Auxiliary Submission
       if (!shareData.error && auxBlockValid) {
         _this.handleAuxiliary(auxShareData, true, (accepted, outputData) => {
           _this.emit('pool.share', outputData, shareValid, accepted);
-          if (accepted && auxBlockValid) {
-            _this.emitLog('special', false, _this.text.stratumManagerText2());
-          }
         });
       }
     });
