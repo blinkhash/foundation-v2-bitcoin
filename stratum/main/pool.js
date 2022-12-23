@@ -144,7 +144,7 @@ const Pool = function(config, configMain, callback) {
   };
 
   // Handle Validating Worker Shares
-  this.handleValidation = function(block, workers) {
+  this.handleValidation = function(block, workers, sending) {
 
     // Initialize Updates
     let reward = 0;
@@ -174,7 +174,7 @@ const Pool = function(config, configMain, callback) {
     // Immature -> Generate, Orphan
     // Generate -> Orphan
 
-    if (block.previous !== block.category) reward = block.reward - transactionFee;
+    if ((block.previous !== block.category) || sending) reward = block.reward - transactionFee;
     if (block.category === 'orphan' && block.previous === 'pending') reward = 0;
     if (block.category === 'orphan' && ['immature', 'generate'].includes(block.previous)) reward *= -1;
 
@@ -425,7 +425,7 @@ const Pool = function(config, configMain, callback) {
   };
 
   // Process Upcoming Primary Payments
-  this.handlePrimaryWorkers = function(blocks, workers, callback) {
+  this.handlePrimaryWorkers = function(blocks, workers, sending, callback) {
 
     // Determine Block Handling Procedures
     const updates = {};
@@ -439,7 +439,7 @@ const Pool = function(config, configMain, callback) {
 
       // Orphan Behavior
       case 'orphan':
-        orphan = _this.handleValidation(block, current);
+        orphan = _this.handleValidation(block, current, sending);
         Object.keys(orphan).forEach((address) => {
           if (address in updates) updates[address][block.previous] += orphan[address];
           else {
@@ -451,7 +451,7 @@ const Pool = function(config, configMain, callback) {
 
       // Immature Behavior
       case 'immature':
-        immature = _this.handleValidation(block, current);
+        immature = _this.handleValidation(block, current, sending);
         Object.keys(immature).forEach((address) => {
           if (address in updates) updates[address].immature += immature[address];
           else updates[address] = { immature: immature[address], generate: 0 };
@@ -460,7 +460,7 @@ const Pool = function(config, configMain, callback) {
 
       // Generate Behavior
       case 'generate':
-        generate = _this.handleValidation(block, current);
+        generate = _this.handleValidation(block, current, sending);
         Object.keys(generate).forEach((address) => {
           if (address in updates) updates[address].generate += generate[address];
           else updates[address] = { immature: 0, generate: generate[address] };
@@ -800,7 +800,7 @@ const Pool = function(config, configMain, callback) {
   };
 
   // Process Upcoming Auxiliary Payments
-  this.handleAuxiliaryWorkers = function(blocks, workers, callback) {
+  this.handleAuxiliaryWorkers = function(blocks, workers, sending, callback) {
 
     // Determine Block Handling Procedures
     const updates = {};
@@ -814,7 +814,7 @@ const Pool = function(config, configMain, callback) {
 
       // Orphan Behavior
       case 'orphan':
-        orphan = _this.handleValidation(block, current);
+        orphan = _this.handleValidation(block, current, sending);
         Object.keys(orphan).forEach((address) => {
           if (address in updates) updates[address][block.previous] += orphan[address];
           else {
@@ -826,7 +826,7 @@ const Pool = function(config, configMain, callback) {
 
       // Immature Behavior
       case 'immature':
-        immature = _this.handleValidation(block, current);
+        immature = _this.handleValidation(block, current, sending);
         Object.keys(immature).forEach((address) => {
           if (address in updates) updates[address].immature += immature[address];
           else updates[address] = { immature: immature[address], generate: 0 };
@@ -835,7 +835,7 @@ const Pool = function(config, configMain, callback) {
 
       // Generate Behavior
       case 'generate':
-        generate = _this.handleValidation(block, current);
+        generate = _this.handleValidation(block, current, sending);
         Object.keys(generate).forEach((address) => {
           if (address in updates) updates[address].generate += generate[address];
           else updates[address] = { immature: 0, generate: generate[address] };
