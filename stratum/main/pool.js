@@ -464,6 +464,7 @@ const Pool = function(config, configMain, callback) {
         Object.keys(generate).forEach((address) => {
           if (address in updates) updates[address].generate += generate[address];
           else updates[address] = { immature: 0, generate: generate[address] };
+          if (block.previous === 'immature') updates[address].immature -= generate[address];
         });
         break;
 
@@ -839,6 +840,7 @@ const Pool = function(config, configMain, callback) {
         Object.keys(generate).forEach((address) => {
           if (address in updates) updates[address].generate += generate[address];
           else updates[address] = { immature: 0, generate: generate[address] };
+          if (block.previous === 'immature') updates[address].immature -= generate[address];
         });
         break;
 
