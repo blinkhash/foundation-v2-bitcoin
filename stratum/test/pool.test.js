@@ -356,7 +356,7 @@ describe('Test pool functionality', () => {
     mockSetupDaemons(pool, () => {
       mockSetupSettings(pool, () => {
         pool.setupRecipients();
-        expect(pool.statistics.feePercentage).toBe(0.05);
+        expect(pool.statistics.feePercentage).toBe(0.051);
         done();
       });
     });

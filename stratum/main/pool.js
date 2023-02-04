@@ -1124,6 +1124,7 @@ const Pool = function(config, configMain, callback) {
     });
 
     // Indicate Recipients are Setup Successfully
+    _this.statistics.feePercentage = Math.round(_this.statistics.feePercentage * 1000) / 1000;
     _this.emitLog('debug', true, _this.text.checksMessageText5());
   };
 
