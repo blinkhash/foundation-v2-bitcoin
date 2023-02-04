@@ -41,7 +41,7 @@ const Manager = function(config, configMain) {
   };
 
   // Check if New Block is Processed
-  this.handleTemplate = function(rpcData, newBlock) {
+  this.handleTemplate = function(rpcData, newBlock, newBroadcast) {
 
     // If Current Job !== Previous Job
     let isNewBlock = _this.currentJob === null;
@@ -53,6 +53,7 @@ const Manager = function(config, configMain) {
 
     // Build New Block Template
     if (!isNewBlock && !newBlock) return false;
+    if (newBroadcast) _this.validJobs = {};
     const tmpTemplate = new Template(
       _this.jobCounter.next(),
       _this.config,
@@ -60,7 +61,6 @@ const Manager = function(config, configMain) {
       _this.extraNoncePlaceholder);
 
     // Update Current Template
-    _this.validJobs = {};
     _this.currentJob = tmpTemplate;
     _this.emit('manager.block.new', tmpTemplate);
     _this.validJobs[tmpTemplate.jobId] = tmpTemplate;
