@@ -159,10 +159,7 @@ const Pool = function(config, configMain, callback) {
     // Calculate Worker Times
     const combined = {};
     workers.forEach((worker) => {
-      if (worker.miner in combined) {
-        combined[worker.miner].times += worker.times;
-        combined[worker.miner].work += worker.work;
-      } else combined[worker.miner] = { times: worker.times, work: worker.work };
+      combined[worker.miner] = { times: worker.times, work: worker.work };
     });
 
     // Calculate Maximum Worker Time
